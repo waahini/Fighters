@@ -7,6 +7,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#05080f">
+  <meta name="description" content="공중 요새 · 에이스 파일럿 · 편대 증식 공중전 슈팅 게임">
+  <!-- PWA 매니페스트 — 홈 화면 설치 지원 -->
+  <link rel="manifest" href="manifest.json">
+  <!-- 앱 아이콘 (PWA / 북마크) -->
+  <link rel="icon"             href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
   <title>라스트 워 : 에어 컴뱃 (Air Combat)</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -361,5 +367,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="game.js"></script>
+  <script>
+    /* 서비스 워커 등록 (HTTPS 또는 localhost 환경에서 동작) */
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

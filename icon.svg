@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#05080f"/>
+  <rect width="192" height="192" rx="32" fill="url(#g1)"/>
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a1f3f"/>
+      <stop offset="1" stop-color="#05080f"/>
+    </linearGradient>
+  </defs>
+  <!-- 0´ Ù´ -->
+  <rect x="88" y="38" width="16" height="80" rx="6" fill="#4eb4ff"/>
+  <!-- ü   -->
+  <polygon points="96,90 30,118 50,118 96,104 142,118 162,118" fill="#2f74f0"/>
+  <!-- ,¬   -->
+  <polygon points="96,108 70,128 80,128 96,118 112,128 122,128" fill="#2f74f0"/>
+  <!-- p… -->
+  <ellipse cx="96" cy="60" rx="9" ry="14" fill="#8af4ff"/>
+  <!-- ÔÄ ˆC -->
+  <ellipse cx="96" cy="122" rx="5" ry="10" fill="#ffc857"/>
+  <ellipse cx="96" cy="128" rx="3" vy="6" fill="#ff9a2e"/>
+  <!-- M¤¸ -->
+  <text x="96" y="158" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="14" fill="#ffc857" letter-spacing="1">LAST WAR</text>
+</svg>

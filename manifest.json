@@ -1,0 +1,27 @@
+{
+  "name": "라스트 워 : 에어 컴뱃",
+  "short_name": "라스트 워",
+  "description": "공중 요새 · 에이스 파일럿 · 편대 증식 공중전",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05080f",
+  "theme_color": "#05080f",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games"],
+  "screenshots": []
+}

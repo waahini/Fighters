@@ -1422,7 +1422,7 @@ function cacheAllyPositions() {
   B._allies = getAllyPositions(MAX_LOGIC_ALLIES);
 }
 function enemyShoot(e) {
-  const bspeed=4.0+B.stage.enemyTier*0.22+(B.weather==="storm"?0.4:0);
+  const bspeed=6.0+B.stage.enemyTier*0.35+(B.weather==="storm"?0.6:0);
   const prevLen = B.enemyBullets.length;
   if (e.kind==="bomber") {
     for (const dx of [-0.6,0,0.6])
@@ -1439,10 +1439,12 @@ function enemyShoot(e) {
   }
 }
 function bossShoot() {
-  const e=B.boss; const count=9;
+  const e=B.boss;
+  const bvy = 5.5 + (B.stage?.enemyTier||1)*0.3; /* 보스 탄속: 티어에 따라 증가 */
+  const count=9;
   for (let i=0;i<count;i++) {
     const t=i/(count-1); const dx=(t-0.5)*3.2;
-    B.enemyBullets.push({ x:e.x+dx*30, y:e.y+50, w:6, h:14, vx:dx*0.6, vy:3.2, dmg:12, color:"#ff6a8f" });
+    B.enemyBullets.push({ x:e.x+dx*30, y:e.y+50, w:6, h:14, vx:dx*0.8, vy:bvy, dmg:14, color:"#ff6a8f" });
   }
 }
 
