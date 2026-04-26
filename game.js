@@ -1218,12 +1218,12 @@ function spawnEnemy(forceTier) {
   if (roll>0.93) type="gunboat";
   if (roll>0.985) type="rammer";
   const pf=({
-    raider:  { atype:"interceptor", hpMul:1.0,  speed:3.6, fireBase:60,   size:36 },
-    bomber:  { atype:"bomber",      hpMul:1.8,  speed:2.4, fireBase:80,   size:44 },
-    sniper:  { atype:"gunship",     hpMul:0.9,  speed:3.0, fireBase:110,  size:34 },
-    scout:   { atype:"interceptor", hpMul:0.55, speed:5.8, fireBase:42,   size:26 },
-    gunboat: { atype:"bomber",      hpMul:2.8,  speed:1.6, fireBase:44,   size:54 },
-    rammer:  { atype:"bomber",      hpMul:9.0,  speed:0.5, fireBase:9999, size:60 }
+    raider:  { atype:"interceptor", hpMul:1.0,  speed:2.8, fireBase:60,   size:36, bMul:2.8 },
+    bomber:  { atype:"bomber",      hpMul:1.8,  speed:1.8, fireBase:80,   size:44, bMul:2.6 },
+    sniper:  { atype:"gunship",     hpMul:0.9,  speed:2.2, fireBase:110,  size:34, bMul:3.5 },
+    scout:   { atype:"interceptor", hpMul:0.55, speed:4.2, fireBase:42,   size:26, bMul:2.2 },
+    gunboat: { atype:"bomber",      hpMul:2.8,  speed:1.2, fireBase:44,   size:54, bMul:2.4 },
+    rammer:  { atype:"bomber",      hpMul:9.0,  speed:0.5, fireBase:9999, size:60, bMul:1.0 }
   })[type];
   const hp=Math.floor((18+tier*6+Math.max(0,(B.wave||1)-1)*2)*pf.hpMul);
   if (type==="rammer") {
@@ -1422,29 +1422,37 @@ function cacheAllyPositions() {
   B._allies = getAllyPositions(MAX_LOGIC_ALLIES);
 }
 function enemyShoot(e) {
-  const bspeed=6.0+B.stage.enemyTier*0.35+(B.weather==="storm"?0.6:0);
-  const prevLen = B.enemyBullets.length;
+  /* 적 탄속 = (적 이동속도 + 기본 이동 상수) × bMul + 티어 보너스
+     → 탄환이 적 이동속도의 2~3.5배로 자연스럽게 빠름 */
+  const tierBonus = B.stage.enemyTier * 0.3;
+  const stormAdd  = B.weather==="storm" ? 0.5 : 0;
+  const eSpeed    = (e.speed||2.8) + 1.2;          /* 실제 이동속도 */
+  const bMul      = e.bMul || 2.6;
+  const bspeed    = eSpeed * bMul + tierBonus + stormAdd;
+
   if (e.kind==="bomber") {
     for (const dx of [-0.6,0,0.6])
-      B.enemyBullets.push({ x:e.x, y:e.y+12, w:7, h:14, vx:dx, vy:bspeed+0.4, dmg:11, color:"#ffae61" });
+      B.enemyBullets.push({ x:e.x, y:e.y+12, w:7, h:14, vx:dx*1.2, vy:bspeed, dmg:11, color:"#ffae61" });
   } else if (e.kind==="sniper") {
-    B.enemyBullets.push({ x:e.x, y:e.y+12, w:5, h:18, vx:0, vy:bspeed+2.2, dmg:13, color:"#d2b6ff" });
+    B.enemyBullets.push({ x:e.x, y:e.y+12, w:5, h:18, vx:0, vy:bspeed, dmg:14, color:"#d2b6ff" });
   } else if (e.kind==="scout") {
-    B.enemyBullets.push({ x:e.x, y:e.y+10, w:4, h:14, vx:0, vy:bspeed+3.2, dmg:7, color:"#70ff90" });
+    B.enemyBullets.push({ x:e.x, y:e.y+10, w:4, h:14, vx:0, vy:bspeed, dmg:7, color:"#70ff90" });
   } else if (e.kind==="gunboat") {
     for (const dx of [-1.4,-0.5,0,0.5,1.4])
-      B.enemyBullets.push({ x:e.x+dx*12, y:e.y+12, w:8, h:15, vx:dx*0.5, vy:bspeed+0.2, dmg:15, color:"#ff9a61" });
+      B.enemyBullets.push({ x:e.x+dx*12, y:e.y+12, w:8, h:15, vx:dx*0.8, vy:bspeed, dmg:15, color:"#ff9a61" });
   } else {
     B.enemyBullets.push({ x:e.x, y:e.y+12, w:6, h:13, vx:0, vy:bspeed, dmg:9, color:"#ff87a5" });
   }
 }
 function bossShoot() {
   const e=B.boss;
-  const bvy = 5.5 + (B.stage?.enemyTier||1)*0.3; /* 보스 탄속: 티어에 따라 증가 */
+  const tier = B.stage?.enemyTier||1;
+  /* 보스 탄속 = 보스 이동속도(약 1.5)의 4배 + 티어 보너스 → 탄환이 확실히 빠름 */
+  const bvy = 6.0 + tier*0.4;
   const count=9;
   for (let i=0;i<count;i++) {
     const t=i/(count-1); const dx=(t-0.5)*3.2;
-    B.enemyBullets.push({ x:e.x+dx*30, y:e.y+50, w:6, h:14, vx:dx*0.8, vy:bvy, dmg:14, color:"#ff6a8f" });
+    B.enemyBullets.push({ x:e.x+dx*30, y:e.y+50, w:6, h:14, vx:dx*1.0, vy:bvy, dmg:14, color:"#ff6a8f" });
   }
 }
 
