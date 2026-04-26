@@ -1218,12 +1218,12 @@ function spawnEnemy(forceTier) {
   if (roll>0.93) type="gunboat";
   if (roll>0.985) type="rammer";
   const pf=({
-    raider:  { atype:"interceptor", hpMul:1.0,  speed:2.2, fireBase:70,   size:36 },
-    bomber:  { atype:"bomber",      hpMul:1.8,  speed:1.3, fireBase:95,   size:44 },
-    sniper:  { atype:"gunship",     hpMul:0.9,  speed:1.8, fireBase:130,  size:34 },
-    scout:   { atype:"interceptor", hpMul:0.55, speed:3.8, fireBase:50,   size:26 },
-    gunboat: { atype:"bomber",      hpMul:2.8,  speed:0.8, fireBase:50,   size:54 },
-    rammer:  { atype:"bomber",      hpMul:9.0,  speed:0.4, fireBase:9999, size:60 }
+    raider:  { atype:"interceptor", hpMul:1.0,  speed:3.6, fireBase:60,   size:36 },
+    bomber:  { atype:"bomber",      hpMul:1.8,  speed:2.4, fireBase:80,   size:44 },
+    sniper:  { atype:"gunship",     hpMul:0.9,  speed:3.0, fireBase:110,  size:34 },
+    scout:   { atype:"interceptor", hpMul:0.55, speed:5.8, fireBase:42,   size:26 },
+    gunboat: { atype:"bomber",      hpMul:2.8,  speed:1.6, fireBase:44,   size:54 },
+    rammer:  { atype:"bomber",      hpMul:9.0,  speed:0.5, fireBase:9999, size:60 }
   })[type];
   const hp=Math.floor((18+tier*6+Math.max(0,(B.wave||1)-1)*2)*pf.hpMul);
   if (type==="rammer") {
@@ -1422,7 +1422,7 @@ function cacheAllyPositions() {
   B._allies = getAllyPositions(MAX_LOGIC_ALLIES);
 }
 function enemyShoot(e) {
-  const bspeed=2.6+B.stage.enemyTier*0.15+(B.weather==="storm"?0.2:0);
+  const bspeed=4.0+B.stage.enemyTier*0.22+(B.weather==="storm"?0.4:0);
   const prevLen = B.enemyBullets.length;
   if (e.kind==="bomber") {
     for (const dx of [-0.6,0,0.6])
@@ -1739,7 +1739,7 @@ function update() {
             e.charging = true;
             const dx=B.player.x-e.x, dy=B.player.y-e.y;
             const dist=Math.max(1, Math.hypot(dx,dy));
-            const spd=14+Math.random()*3;
+            const spd=20+Math.random()*4;
             e.vx=dx/dist*spd; e.vy=dy/dist*spd;
             triggerShake(5,10);
             playSfx("boss_appear");
@@ -1817,7 +1817,7 @@ function update() {
     }
 
     /* ── 일반 적 이동 / 사격 ── */
-    e.phase+=0.03; e.x+=Math.sin(e.phase)*1.4; e.y+=e.speed+0.8;
+    e.phase+=0.035; e.x+=Math.sin(e.phase)*1.8; e.y+=e.speed+1.2;
     e.fireCd--;
     if (e.fireCd<=0) { enemyShoot(e); e.fireCd=e.fireBase+Math.random()*30; }
 
