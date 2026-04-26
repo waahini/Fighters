@@ -1044,7 +1044,7 @@ const B = {
   spawnTick:0, gateTick:0,
   score:0, kills:0, squad:1, maxSquad:20, weaponLv:1,
   keys:{},
-  player:{ x:0, y:0, w:36, h:44, speed:9, fireCd:0, _bombCd:0 },
+  player:{ x:0, y:0, w:36, h:44, speed:18, fireCd:0, _bombCd:0 },
   bullets:[], enemies:[], enemyBullets:[],
   gates:[], powerups:[], particles:[],
   stars:[], clouds:[],
@@ -1309,12 +1309,11 @@ function spawnEvoTarget() {
 
 function playerShoot() {
   const atkBonus=formationAtkBonus();
-  /* squad가 MAX_LOGIC_ALLIES 초과 시 데미지를 비례 스케일 (DPS 동일 유지) */
-  const shootCount = Math.min(B.squad, MAX_LOGIC_ALLIES);
-  const dmgScale   = B.squad > MAX_LOGIC_ALLIES ? B.squad / MAX_LOGIC_ALLIES : 1.0;
+  /* MAX_SHOOT_ALLIES 초과 아군은 데미지로 보상 — 총알 수를 상수로 유지 */
+  const dmgScale = B.squad > MAX_SHOOT_ALLIES ? B.squad / MAX_SHOOT_ALLIES : 1.0;
   const baseDmg=(B.baseAtk*(1+(B.weaponLv-1)*0.35)+atkBonus*0.25)*dmgScale;
   const bspeed=10+B.weaponLv*0.7;
-  const allies=B._allies;  /* 캐시 재사용 */
+  const allies=B._allies.slice(0, MAX_SHOOT_ALLIES);  /* 발사 아군 상한 */
   for (const ally of allies) {
     const type=ally.meta.type;
     if (type==="interceptor") {
@@ -1356,15 +1355,20 @@ function playerShoot() {
   const bdmg = _skillState.giantBullets ? baseDmg * 1.5 * dmgMult : baseDmg * dmgMult;
 
   if (_skillState.dualShot) {
-    for (const ally of allies) {
-      B.bullets.push({ x:ally.x-14, y:ally.y-16, w:bw, h:bh, v:bspeed+2, vx:-1, dmg:bdmg*0.6, atype:"interceptor", color:"#ff88ff" });
-      B.bullets.push({ x:ally.x+14, y:ally.y-16, w:bw, h:bh, v:bspeed+2, vx:1,  dmg:bdmg*0.6, atype:"interceptor", color:"#ff88ff" });
+    /* 최대 6명 기준으로 총알 생성 (상한 초과시 데미지 스케일) */
+    const dualAllies = allies.slice(0, 6);
+    const dualScale = allies.length > 6 ? allies.length / 6 : 1;
+    for (const ally of dualAllies) {
+      B.bullets.push({ x:ally.x-14, y:ally.y-16, w:bw, h:bh, v:bspeed+2, vx:-1, dmg:bdmg*0.6*dualScale, atype:"interceptor", color:"#ff88ff" });
+      B.bullets.push({ x:ally.x+14, y:ally.y-16, w:bw, h:bh, v:bspeed+2, vx:1,  dmg:bdmg*0.6*dualScale, atype:"interceptor", color:"#ff88ff" });
     }
   }
   if (_skillState.tripleShot) {
-    for (const ally of allies) {
+    const triAllies = allies.slice(0, 5);
+    const triScale = allies.length > 5 ? allies.length / 5 : 1;
+    for (const ally of triAllies) {
       for (const vx of [-3.5, 0, 3.5]) {
-        B.bullets.push({ x:ally.x, y:ally.y-16, w:bw, h:bh, v:bspeed, vx, dmg:bdmg*0.5, atype:"interceptor", color:"#88ffcc" });
+        B.bullets.push({ x:ally.x, y:ally.y-16, w:bw, h:bh, v:bspeed, vx, dmg:bdmg*0.5*triScale, atype:"interceptor", color:"#88ffcc" });
       }
     }
   }
@@ -1380,8 +1384,9 @@ function playerShoot() {
   playSfx("shoot");
 }
 /* 로직용(사격) 최대 30명, 렌더용 최대 15명 — 실제 squad 숫자는 그대로 유지 */
-const MAX_LOGIC_ALLIES  = 30;
-const MAX_VISUAL_ALLIES = 15;
+const MAX_LOGIC_ALLIES  = 15;  /* 아군 위치 계산 상한 */
+const MAX_VISUAL_ALLIES = 12;  /* 화면에 그리는 아군 상한 */
+const MAX_SHOOT_ALLIES  = 8;   /* 총알 생성 아군 수 상한 (초과분은 데미지로 보상) */
 
 function getAllyPositions(limit) {
   if (B.squad<=0) return [];
@@ -1398,7 +1403,13 @@ function getAllyPositions(limit) {
   return positions;
 }
 /* 매 update 시작 시 한 번만 계산해 캐시 */
+let _lastAllyX = -1, _lastAllySquad = -1;
 function cacheAllyPositions() {
+  /* 플레이어 X나 squad가 바뀐 경우에만 재계산 */
+  const px = Math.round(B.player.x);
+  const sq = B.squad;
+  if (px === _lastAllyX && sq === _lastAllySquad) return;
+  _lastAllyX = px; _lastAllySquad = sq;
   B._allies = getAllyPositions(MAX_LOGIC_ALLIES);
 }
 function enemyShoot(e) {
@@ -1665,9 +1676,11 @@ function update() {
       clearMesh(b);
       B.enemyBullets.splice(i,1); continue;
     }
-    let hit=false;
+      let hit=false;
+    /* 아군 히트박스: 간단한 X 범위 체크 먼저 → 통과 시 Y 체크 (최적화) */
+    const bx=b.x, by=b.y;
     for (const ally of B._allies) {
-      if (intersects({...b,w:10,h:12},{x:ally.x,y:ally.y,w:28,h:32})) {
+      if (Math.abs(bx - ally.x) < 19 && Math.abs(by - ally.y) < 22) {
         loseAlly(ally.x,ally.y); clearMesh(b); B.enemyBullets.splice(i,1); hit=true; break;
       }
     }
@@ -2162,6 +2175,51 @@ function drawAllyJetFast(x, y, w, h, type) {
   ctx.beginPath(); ctx.ellipse(-w*0.23,h*0.53, w*0.042,h*0.12, 0,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.ellipse( w*0.23,h*0.53, w*0.042,h*0.12, 0,0,Math.PI*2); ctx.fill();
   ctx.restore();
+}
+
+/* ============================================================
+   오프스크린 스프라이트 캐시 — 비리더 아군 드로잉용
+   매 프레임 캔버스 경로 연산 대신 drawImage 한 번으로 처리
+   ============================================================ */
+const _allyCache = {};  /* key: "interceptor_28" → OffscreenCanvas */
+function _getAllySprite(type, sz) {
+  const key = type + "_" + sz;
+  if (_allyCache[key]) return _allyCache[key];
+  /* 오프스크린에 미리 그려둠 */
+  const pad = 4;
+  const oc = document.createElement("canvas");
+  oc.width  = Math.ceil(sz * 2) + pad * 2;
+  oc.height = Math.ceil(sz * 1.36) + pad * 2;
+  const oc2 = oc.getContext("2d");
+  oc2.translate(oc.width / 2, oc.height / 2);
+  /* drawAllyJetFast 로직을 오프스크린에 그림 */
+  const c = ({
+    interceptor: { wing:"#5a88b0", body:"#7aa0c0", cockpit:"#30b4f0", flame:"#ffcc60" },
+    bomber:      { wing:"#806840", body:"#aa9060", cockpit:"#eebb70", flame:"#ff8030" },
+    gunship:     { wing:"#506090", body:"#7890b0", cockpit:"#b098f0", flame:"#b870f0" }
+  })[type] || { wing:"#5a88b0", body:"#7aa0c0", cockpit:"#30b4f0", flame:"#ffcc60" };
+  const w = sz, h = sz * 1.36;
+  oc2.fillStyle = c.wing;
+  oc2.beginPath();
+  oc2.moveTo(-w*0.90,-h*0.03); oc2.lineTo(w*0.90,-h*0.03);
+  oc2.lineTo( w*0.68, h*0.18); oc2.lineTo(-w*0.68, h*0.18);
+  oc2.closePath(); oc2.fill();
+  oc2.fillStyle = c.body;
+  oc2.fillRect(-w*0.29,-h*0.52, w*0.11, h*1.00);
+  oc2.fillRect( w*0.18,-h*0.52, w*0.11, h*1.00);
+  oc2.fillRect(-w*0.09,-h*0.52, w*0.18, h*0.84);
+  oc2.fillStyle = c.cockpit;
+  oc2.beginPath(); oc2.arc(0,-h*0.20, w*0.065,0,Math.PI*2); oc2.fill();
+  oc2.fillStyle = c.flame;
+  oc2.beginPath(); oc2.ellipse(-w*0.23,h*0.53, w*0.042,h*0.12, 0,0,Math.PI*2); oc2.fill();
+  oc2.beginPath(); oc2.ellipse( w*0.23,h*0.53, w*0.042,h*0.12, 0,0,Math.PI*2); oc2.fill();
+  _allyCache[key] = oc;
+  return oc;
+}
+/* 스프라이트를 drawImage로 배치 — save/restore 없이 빠름 */
+function drawAllySprite(x, y, type, sz) {
+  const img = _getAllySprite(type, sz);
+  ctx.drawImage(img, x - img.width / 2, y - img.height / 2);
 }
 
 /* ============================================================
@@ -2799,7 +2857,7 @@ function draw() {
     const sz = 28 * _evoScale;
     const type = a.meta?.type || 'interceptor';
     if (i === 0) {
-      /* 리더: 풀 품질 + 진화 글로우 */
+      /* 리더: 풀 품질 + 진화 글로우 (1번만 실행) */
       if (_sq >= 50) {
         ctx.save();
         ctx.shadowBlur = 20;
@@ -2812,8 +2870,8 @@ function draw() {
       drawAllyJet(a.x, a.y, sz, sz * 1.36, type, true);
       if (_sq >= 10) { ctx.shadowBlur = 0; ctx.restore(); }
     } else {
-      /* 비리더: 경량 버전 */
-      drawAllyJetFast(a.x, a.y, sz, sz * 1.36, type);
+      /* 비리더: 오프스크린 캐시 이미지 — drawImage 1번으로 처리 */
+      drawAllySprite(a.x, a.y, type, sz);
     }
   }
 

@@ -52,7 +52,10 @@ body {
 /* ---------- 앱 컨테이너 ---------- */
 #app {
   width: min(1180px, 100vw);
-  height: 100vh;
+  /* 100dvh: 모바일 주소창 제외 실제 뷰포트 높이 (iOS 15.4+, Android 108+)
+     폴백: 100vh (구형 브라우저) */
+  height: 100dvh;
+  height: 100vh; /* fallback first, then overridden by dvh where supported */
   display: grid;
   grid-template-rows: 54px 1fr 58px;
   background: var(--bg-1);
@@ -60,6 +63,11 @@ body {
   border-right: 1px solid var(--line-soft);
   position: relative;
   overflow: hidden;
+}
+
+/* dvh 지원 브라우저에서만 덮어씀 */
+@supports (height: 100dvh) {
+  #app { height: 100dvh; }
 }
 
 .hidden {
@@ -159,10 +167,15 @@ body {
 .tabbar {
   grid-row: 3;
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(10, 1fr); /* 탭 10개: 출격·편대·영웅·스카우트·연구·요새·스킨·병원·퀘스트·상점 */
   background: linear-gradient(180deg, #0b192e 0%, #081220 100%);
   border-top: 1px solid var(--line-soft);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+.tabbar::-webkit-scrollbar { display: none; }
 
 .tab {
   display: flex;
@@ -1023,75 +1036,138 @@ body {
   .mobile-only { display: inline !important; }
 
   /* 앱 전체 */
-  #app { grid-template-rows: 50px 1fr 56px; }
+  #app { grid-template-rows: 48px 1fr 52px; }
 
   /* 상단 바 */
-  .topbar { padding: 0 8px; gap: 6px; }
-  .logo   { font-size: 12px; }
-  .chip   { padding: 4px 7px; font-size: 10px; min-width: 54px; gap: 4px; }
-  #btnSound { padding: 4px 8px; font-size: 13px; }
+  .topbar { padding: 0 6px; gap: 4px; }
+  .logo   { font-size: 11px; letter-spacing: 0.5px; flex-shrink: 0; }
+  .logo span { display: none; }   /* ": 에어 컴뱃" 숨김 */
+  .chips  { gap: 4px; }
+  .chip   { padding: 3px 6px; font-size: 9px; min-width: 48px; gap: 3px; }
+  .icon   { width: 10px; height: 10px; }
+  #btnSound { padding: 3px 7px; font-size: 14px; margin-left: 2px; }
 
-  /* 탭바 — 가로 스크롤 */
+  /* 탭바 — 가로 스크롤 (10탭) */
   .tabbar {
-    grid-template-columns: repeat(9, 72px);
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    grid-template-columns: repeat(10, 60px);
     scroll-snap-type: x mandatory;
-    padding: 0 4px;
+    padding: 0 2px;
   }
-  .tabbar::-webkit-scrollbar { display: none; }
-  .tab { scroll-snap-align: start; font-size: 9px; min-width: 64px; }
-  .tab .tb-ico { font-size: 14px; }
+  .tab { scroll-snap-align: start; font-size: 8.5px; min-width: 60px; padding: 2px 0; }
+  .tab .tb-ico { font-size: 13px; }
 
-  /* 버튼 크기 */
-  .btn { padding: 12px 16px; font-size: 13px; min-height: 44px; }
+  /* 버튼 최소 터치 영역 44px */
+  .btn { padding: 11px 14px; font-size: 13px; min-height: 44px; }
 
-  /* 로비 섹션 패딩 줄이기 */
-  .section { padding: 10px 10px; }
+  /* 로비 섹션 */
+  .section { padding: 8px 10px; }
 
-  /* HUD 텍스트 작게 */
-  #battleHud { font-size: 11px; gap: 4px; }
-  .hud-card  { padding: 5px 8px; }
+  /* ── 전투 HUD: 2줄로 스태킹 ── */
+  #battleHud {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    top: 6px; left: 6px; right: 6px;
+  }
+  .hud-card {
+    padding: 4px 8px;
+    font-size: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* 3번째 HUD 카드 (진화) 숨겨서 공간 확보 */
+  #battleHud .hud-card:nth-child(3) { display: none; }
 
-  /* 게이트 설명 툴팁 제거 (공간 부족) */
-  #weatherIndicator { font-size: 11px; padding: 4px 10px; }
+  /* 전투 버튼: HUD 우측에 작은 아이콘 형태로 이동 */
+  #battleButtons {
+    bottom: auto;
+    top: 6px;
+    right: 6px;
+    left: auto;
+    flex-direction: column;
+    gap: 4px;
+    width: auto;
+    justify-content: flex-start;
+  }
+  #btnBPause, #btnBHome {
+    padding: 5px 8px;
+    font-size: 11px;
+    min-height: 32px;
+    border-radius: 8px;
+  }
+  /* 버튼 텍스트 축약 */
+  #btnBPause { font-size: 0; }   /* 텍스트 숨기고 이모지만 */
+  #btnBPause::before { content: "⏸"; font-size: 16px; }
+  #btnBHome  { font-size: 0; }
+  #btnBHome::before  { content: "🏠"; font-size: 16px; }
+
+  /* 날씨 인디케이터 */
+  #weatherIndicator { font-size: 10px; padding: 3px 8px; }
+
+  /* ── 모바일 조작 버튼 ── */
+  /* 버튼을 화면 하단에 딱 붙임 — 플레이어가 버튼 위에 렌더링됨을 방지 */
+  #mobileBattleCtrl {
+    bottom: 0;
+    padding: 0 8px 8px;
+    background: linear-gradient(0deg, rgba(4,10,22,0.75) 0%, transparent 100%);
+  }
+  .btn-ctrl       { width: 72px; height: 64px; font-size: 24px; border-radius: 14px; }
+  .btn-ctrl-bomb  { width: 60px; height: 60px; font-size: 22px; }
 
   /* 스테이지 카드 */
   .stage-card { padding: 10px 12px; }
 
-  /* 모바일 조작 버튼 더 크게 */
-  .btn-ctrl { width: 80px; height: 80px; font-size: 28px; }
-  .btn-ctrl-bomb { width: 68px; height: 68px; font-size: 26px; }
-  #mobileBattleCtrl { bottom: 64px; padding: 0 12px; }
-  /* 모바일에서 battleButtons를 상단으로 이동 */
-  #battleButtons { bottom: auto; top: 38px; }
-  /* 배틀 버튼 텍스트 축약 */
-  #btnBPause::after { content: " (P)"; display: none; }
-  #btnBHome::after  { content: " (M)"; display: none; }
-
   /* 결과 카드 */
-  .result-card { padding: 16px; }
-  .result-card h2 { font-size: 22px; }
+  .result-card { padding: 14px; width: 92%; }
+  .result-card h2 { font-size: 20px; }
+
+  /* 스킬 픽커 카드 세로 배치 */
+  .skill-cards { flex-direction: column; gap: 8px; }
+  .skill-card  { width: 100%; max-width: 100%; }
+
+  /* 상점 페이지 */
+  .shop-grid { grid-template-columns: 1fr; }
+  .gem-grid  { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* 아이폰 노치/홈바 안전 영역 */
+/* ── iOS 노치/홈바 Safe Area ── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .tabbar {
     padding-bottom: env(safe-area-inset-bottom);
+    height: calc(52px + env(safe-area-inset-bottom));
   }
   #mobileBattleCtrl {
-    bottom: calc(70px + env(safe-area-inset-bottom));
+    /* 홈바 위에 컨트롤 올리기 */
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  /* 노치 있는 기기는 상단도 패딩 */
+  .topbar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(54px + env(safe-area-inset-top));
   }
 }
 
-/* 가로 모드 (landscape) */
+/* ── 가로 모드 (landscape) ── */
 @media (max-height: 500px) and (orientation: landscape) {
-  #app { grid-template-rows: 44px 1fr 48px; }
-  .hud-card { padding: 4px 8px; font-size: 10px; }
-  .btn-ctrl { width: 60px; height: 60px; font-size: 20px; }
-  #mobileBattleCtrl { bottom: 54px; }
+  #app { grid-template-rows: 40px 1fr 44px; }
+  /* HUD 작게, 가로로 */
+  #battleHud { flex-direction: row; }
+  #battleHud .hud-card:nth-child(3) { display: flex; font-size: 9px; }
+  .hud-card { padding: 3px 7px; font-size: 9px; }
+  /* 컨트롤 더 작게 */
+  .btn-ctrl      { width: 52px; height: 48px; font-size: 18px; }
+  .btn-ctrl-bomb { width: 44px; height: 44px; font-size: 16px; }
+  #mobileBattleCtrl { padding: 0 6px 4px; }
+  /* 탭바 더 촘촘하게 */
+  .tabbar { grid-template-columns: repeat(10, 52px); }
+  .tab { font-size: 8px; min-width: 52px; }
+  .tab .tb-ico { font-size: 12px; }
+}
+
+/* ── 아주 작은 폰 (320px 이하) ── */
+@media (max-width: 360px) {
+  .chip { min-width: 40px; font-size: 8.5px; padding: 2px 5px; }
+  .btn-ctrl { width: 62px; height: 56px; font-size: 20px; }
 }
 
 /* ════════════════════════════════════════════════════
