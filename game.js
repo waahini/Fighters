@@ -1034,9 +1034,16 @@ function resizeCanvas() {
   W = cw;
   H = ch;
 }
-window.addEventListener("resize", () => {
-  if (!$("battlePage").classList.contains("hidden")) resizeCanvas();
-});
+function _onResize() {
+  if (!$("battlePage").classList.contains("hidden")) {
+    resizeCanvas();
+    /* 캔버스 리사이즈 후 플레이어 Y 재계산 */
+    if (B.running) B.player.y = _playerBaseY();
+  }
+}
+window.addEventListener("resize", _onResize);
+/* 모바일 화면 회전 */
+window.addEventListener("orientationchange", () => setTimeout(_onResize, 200));
 
 const B = {
   running:false, paused:false, over:false,
@@ -1111,7 +1118,7 @@ function startBattle(stage) {
   B.evoSpawnTick = 0;
 
   showBattle();
-  B.player.x=W/2; B.player.y=H-90; B.player.fireCd=0; B.player._bombCd=0;
+  B.player.x=W/2; B.player.y=_playerBaseY(); B.player.fireCd=0; B.player._bombCd=0;
   B.running=true;
   $("gameOverPanel").classList.remove("show");
   $("bossPanel").classList.remove("show");
@@ -1168,14 +1175,16 @@ window.addEventListener("keydown", e => {
 window.addEventListener("keyup", e => { B.keys[e.key]=false; B.keys[e.code]=false; });
 
 let dragging=false;
-canvas.addEventListener("pointerdown", e => { ensureAudio(); dragging=true; movePlayerTo(e); });
-canvas.addEventListener("pointermove", e => { if(dragging) movePlayerTo(e); });
-canvas.addEventListener("pointerup",   () => dragging=false);
+canvas.addEventListener("pointerdown", e => { e.preventDefault(); ensureAudio(); dragging=true; movePlayerTo(e); }, { passive:false });
+canvas.addEventListener("pointermove", e => { e.preventDefault(); if(dragging) movePlayerTo(e); }, { passive:false });
+canvas.addEventListener("pointerup",   e => { e.preventDefault(); dragging=false; }, { passive:false });
 canvas.addEventListener("pointerleave",() => dragging=false);
+/* 터치 기기: 멀티터치 줌 방지 */
+canvas.addEventListener("touchstart",  e => e.preventDefault(), { passive:false });
 function movePlayerTo(e) {
   const r=canvas.getBoundingClientRect();
-  B.player.x=clamp(e.clientX-r.left,20,W-20);
-  /* Y 고정 — 좌우 이동만 허용 */
+  const scaleX = W / r.width; /* DPR 보정 */
+  B.player.x = clamp((e.clientX - r.left) * scaleX, 20, W-20);
 }
 
 $("btnBPause").addEventListener("click",    () => { if(B.running) B.paused=!B.paused; });
@@ -1576,7 +1585,7 @@ function update() {
   if (B.keys.ArrowRight||B.keys.d||B.keys.D) p.x+=s;
   p.x=clamp(p.x,20,W-20);
   /* Y는 화면 하단 고정 */
-  p.y = H - 90;
+  p.y = _playerBaseY();
 
   /* 3D 지형 배경 스크롤 */
   scrollBgObjects(2.8);
@@ -3355,13 +3364,14 @@ if (_btnBomb) {
   _btnBomb.addEventListener("mousedown",  _bombFire);
 }
 
-/* 모바일 환경 감지 → 터치 힌트 표시 */
-(function _initMobileHint() {
-  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  if (!isTouchDevice) return;
-  /* 처음 전투 시작 시 힌트 표시 */
-  window._showTouchHintOnce = true;
-})();
+/* 모바일 환경 감지 */
+const _isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+if (_isTouchDevice) window._showTouchHintOnce = true;
+
+/* 터치 기기 플레이어 Y 오프셋: 모바일 컨트롤(약 80px) 위에 플레이어 위치 */
+function _playerBaseY() {
+  return _isTouchDevice ? H - 105 : H - 90;
+}
 
 function init() {
   resetDailyQuestsIfNeeded();

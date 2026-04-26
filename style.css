@@ -35,8 +35,11 @@ body {
   background: var(--bg-0);
   color: var(--text);
   font-family: "Pretendard", "Segoe UI", "Malgun Gothic", sans-serif;
-  min-height: 100vh;
+  height: 100%;
   overflow: hidden;
+  /* iOS Safari 풀-투-리프레시 방지 */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -1004,8 +1007,19 @@ body {
   #mobileBattleCtrl:hover { opacity: 0.85; }
 }
 
-/* canvas touch */
-#game { touch-action: none; }
+/* canvas touch — 모든 기본 터치 동작 차단 (스크롤, 줌, 탄성 스크롤) */
+#game {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 전체 앱 터치 선택 방지 */
+#app {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
 /* ============================================================
    전역 텍스트 가시성 강화
