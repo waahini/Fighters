@@ -7,13 +7,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#05080f">
-  <meta name="description" content="공중 요새 · 에이스 파일럿 · 편대 증식 공중전 슈팅 게임">
+  <meta name="description" content="편대 공중전 슈팅 — 출격·영웅·연구·요새·스킨·일일 퀘스트. 단일 플레이·로컬 기록.">
   <!-- PWA 매니페스트 — 홈 화면 설치 지원 -->
   <link rel="manifest" href="manifest.json">
   <!-- 앱 아이콘 (PWA / 북마크) -->
   <link rel="icon"             href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <title>라스트 워 : 에어 컴뱃 (Air Combat)</title>
+  <title>라스트 워 · 에어 컴뱃</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,7 +27,7 @@
         <div class="chip alloy"><i class="icon alloy"></i>합금 <b id="cAlloy">0</b></div>
         <div class="chip gem"><i class="icon gem"></i>다이아 <b id="cGem">0</b></div>
       </div>
-      <button id="btnSound" class="btn ghost" style="padding:5px 10px;font-size:16px;margin-left:6px;">🔊</button>
+      <button type="button" id="btnSound" class="btn btn-icon btn-sound" title="효과음">🔊</button>
     </header>
 
     <!-- ═══════════════════════════════════════════
@@ -38,9 +38,10 @@
       <!-- ── 타이틀 화면 ── -->
       <section id="titlePage" class="page">
         <div class="title-stage">
-          <div class="title-brand">L A S T  W A R</div>
-          <h1 class="title-main">AIR COMBAT</h1>
-          <p class="title-sub">공중 요새 · 편대 · 승격 슈팅</p>
+          <p class="title-brand">라스트 워</p>
+          <h1 class="title-main">에어 컴뱃</h1>
+          <p class="title-en" lang="en">Air Combat</p>
+          <p class="title-sub">편대 슈팅 · 기지 육성 · 한 판씩 올리는 점수</p>
           <div class="title-art" id="titleArt"></div>
           <div class="title-btns">
             <button id="btnStart"    class="btn gold">게임 시작</button>
@@ -59,8 +60,7 @@
         <!-- 출격 탭 -->
         <div class="section active" data-section="sortie">
           <h2>출격</h2>
-          <p class="sub">스테이지를 고릅니다. 보스 구역은 대형 함선이 나옵니다. 잠금은 <b>최고 점수</b>로 풀립니다.</p>
-          <div id="rankingBlock" class="ranking-box"></div>
+          <p class="sub">스테이지마다 난이도·보스·보상이 다릅니다. 잠긴 구역은 <b>누적 최고 점수</b>로 해제 · 무한은 생존 웨이브 기록</p>
           <div class="row between" style="margin-bottom:10px;">
             <div class="row" style="gap:6px;">
               <span class="tag I">요격기</span>
@@ -76,69 +76,70 @@
         <!-- 편대 탭 -->
         <div class="section" data-section="squad">
           <h2>편대</h2>
-          <p class="sub">슬롯 5개(선봉 2·후위 3). 앞줄이 먼저 맞습니다. 추천 편성으로 전력 순 자동 배치가 가능합니다.</p>
-          <div id="squadBoard" class="grid" style="grid-template-columns:repeat(5,1fr);gap:10px;"></div>
-          <div style="margin-top:14px;display:flex;gap:8px;">
-            <button id="btnAutoSquad"  class="btn">추천 편성</button>
-            <button id="btnClearSquad" class="btn ghost">편성 초기화</button>
+          <p class="sub">5슬롯(선봉 2·후위 3) — <b>앞</b>이 먼저 격추됩니다. 여기에 올라간 파일럿만 전투에 동행합니다.</p>
+          <div id="squadBoard" class="grid squad-grid"></div>
+          <div class="squad-toolbar">
+            <button type="button" id="btnAutoSquad"  class="btn">전력 추천</button>
+            <button type="button" id="btnClearSquad" class="btn ghost">전원 해제</button>
           </div>
-          <p class="sub" style="margin-top:14px;">편대 총 전력: <b id="squadPower" style="color:var(--gold)">0</b></p>
+          <p class="squad-total">편대 전력 <b id="squadPower" class="squad-total__n">0</b></p>
         </div>
 
         <!-- 영웅 탭 -->
         <div class="section" data-section="heroes">
           <h2>영웅</h2>
-          <p class="sub">골드로 레벨을 올려 공격·체력이 오릅니다. 등급(N~UR)에 따라 성장 폭이 다릅니다.</p>
+          <p class="sub">골드로 <b>레벨</b>이 오를수록 전투 중 공격·체력 수치에 반영됩니다. (최대 Lv.30 · 등급=성장배율)</p>
           <div id="heroList" class="hero-list"></div>
         </div>
 
         <!-- 스카우트 탭 -->
         <div class="section" data-section="scout">
           <h2>레이더 스카우트</h2>
-          <p class="sub">다이아로 파일럿을 뽑습니다(확률: N 55%·R 30%·SR 12%·UR 3%). 10연은 SR 이상 1회 포함.</p>
+          <p class="sub">다이아로 <b>새 파일럿</b>을 영입합니다. N 55% · R 30% · SR 12% · UR 3% — 10연은 SR+ 1기 보정.</p>
           <div class="scout-wrap">
             <div class="scout-card">
-              <h3 style="margin:0;">단일 스카우트</h3>
-              <p style="color:var(--muted);font-size:12px;margin:0;">확률: N 55% · R 30% · SR 12% · UR 3%</p>
-              <button id="btnScout1" class="btn primary">1회 · 다이아 20</button>
+              <h3 class="scout-h3">1회</h3>
+              <p class="scout-odds">N·R·SR·UR · 위 확률 테이블</p>
+              <button type="button" id="btnScout1" class="btn primary btn-block">다이아 20</button>
             </div>
-            <div class="scout-card">
-              <h3 style="margin:0;">10연 스카우트 <small style="color:var(--gold)">(SR 이상 1회 확정)</small></h3>
-              <p style="color:var(--muted);font-size:12px;margin:0;">할인된 가격으로 10회 뽑기.</p>
-              <button id="btnScout10" class="btn gold">10회 · 다이아 180</button>
+            <div class="scout-card scout-card--bundle">
+              <h3 class="scout-h3">10연 <span class="tag UR">SR+1</span></h3>
+              <p class="scout-odds">1회 가격 대비 절약 · 10명 한꺼번에</p>
+              <button type="button" id="btnScout10" class="btn gold btn-block">다이아 180</button>
             </div>
           </div>
+          <p class="scout-result-label">획득 결과</p>
           <div id="scoutResult" class="result-list"></div>
         </div>
 
         <!-- 연구 탭 -->
         <div class="section" data-section="research">
           <h2>연구</h2>
-          <p class="sub">합금으로 엔진·무기·장갑·편대 연구. 전투 밖에서도 영구 보너스가 붙습니다.</p>
+          <p class="sub"><b>합금</b>으로 4가지 시설 연구. 이동·화력·생존·최대 편대 — 전 스테이지에 통째로 반영됩니다.</p>
           <div id="researchList" class="upgrade-list"></div>
         </div>
 
         <!-- 요새 탭 -->
         <div class="section" data-section="fortress">
           <h2>요새</h2>
-          <p class="sub">골드·항공유로 건물을 올려 출격 인원·자원 생산 등이 늘어납니다. 관제탑이 다른 건물 상한을 정합니다.</p>
+          <p class="sub"><b>골드·항공유</b>로 시설 Lv. 비관제·갑판·연구·공장은 <b>관제탑×3</b>까지, 관제탑은 제한 없음.</p>
           <div id="fortressList" class="upgrade-list"></div>
         </div>
 
         <!-- 스킨 탭 -->
         <div class="section" data-section="skins">
           <h2>스킨</h2>
-          <p class="sub">다이아로 도색·요새 외형을 삽니다. 일부는 작은 전투 보너스가 있습니다.</p>
-          <h3 style="margin:10px 0 6px;font-size:15px;">기체 스킨</h3>
+          <p class="sub">다이아로 <b>기체 도색</b>과 <b>요새 외형</b>을 연다. 보너스는 패널에 표시 — 없으면 외형만.</p>
+          <h3 class="h3-lobby">기체</h3>
           <div id="jetSkinList" class="skin-list"></div>
-          <h3 style="margin:14px 0 6px;font-size:15px;">공중 요새 스킨</h3>
+          <h3 class="h3-lobby h3-lobby--sp">공중 요새</h3>
           <div id="fortSkinList" class="skin-list"></div>
         </div>
 
         <!-- 상점 탭 -->
         <div class="section" data-section="shop">
-          <h2>상점</h2>
-          <p class="sub">다이아로 자원을 삽니다. 아래 결제·광고 버튼은 시뮬레이션입니다.</p>
+          <h2>자원 교환</h2>
+          <p class="sub">다이아 → 골드·유류·합금·영입권. <b>시즌 패스</b>는 누적 격추로 단계 보상(인앱 시뮬 전용)</p>
           <div id="shopList" class="shop-row"></div>
           <h3 class="h3-compact">시즌 패스</h3>
           <div id="passList" class="pass-row"></div>
@@ -147,14 +148,14 @@
         <!-- 병원 탭 [Phase 4] -->
         <div class="section" data-section="hospital">
           <h2>병원</h2>
-          <p class="sub">패배 시 부상이 쌓이면 출격 편대가 줄어듭니다. 합금으로 치료하세요.</p>
+          <p class="sub">미션 <b>실패</b> 시 부상이 쌓입니다. 합금으로 치료해야 출격 시 초기 편대가 정상으로 돌아옵니다.</p>
           <div id="hospitalContent"></div>
         </div>
 
         <!-- 퀘스트 탭 [Phase 2] -->
         <div class="section" data-section="quests">
           <h2>일일 퀘스트</h2>
-          <p class="sub">날짜가 바뀌면 목표가 갱신됩니다. 달성 후 수령 버튼으로 보상을 받습니다.</p>
+          <p class="sub">하루 단위로 목표가 바뀝니다. 막대가 차면 <b>보상 받기</b> — 자동으로 들어가지는 않으니 꼭 누르세요.</p>
           <div id="questContent"></div>
         </div>
 
@@ -210,8 +211,8 @@
           <!-- 게임오버 -->
           <div id="gameOverPanel">
             <div class="result-card">
-              <h2 id="overTitle">MISSION FAILED</h2>
-              <p id="overSub">모든 아군이 격추되었습니다.</p>
+              <h2 id="overTitle">미션 실패</h2>
+              <p id="overSub">아군 전멸</p>
               <p>최종 점수 <b id="overScore">0</b> · 격추 <b id="overKills">0</b> · 웨이브 <b id="overWave">0</b></p>
               <p>획득: <span id="overRewards"></span></p>
               <!-- 3배 광고 보상 -->
