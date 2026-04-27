@@ -159,7 +159,10 @@ function newState() {
     dailyProgress:{ dqKills:0, dqScout:0, dqFort:0, dqClear:0, dqGates:0 },
     dailyCompleted:[],
     /* Phase 3 */
-    endlessBest:0
+    endlessBest:0,
+    /* v4: 튜토리얼·로컬 랭킹 */
+    tutorialDone: false,
+    rankHistory: [] /* { score, wave, st, win, t } */
   };
 }
 
@@ -167,7 +170,10 @@ function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return newState();
-    return Object.assign(newState(), JSON.parse(raw));
+    const s = Object.assign(newState(), JSON.parse(raw));
+    if (!Array.isArray(s.rankHistory)) s.rankHistory = [];
+    if (typeof s.tutorialDone !== 'boolean') s.tutorialDone = (s.bestScore|0) > 50;
+    return s;
   } catch { return newState(); }
 }
 function saveState() { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }
@@ -401,12 +407,15 @@ function shopBuy(item) {
     toast('🎉 광고 제거 패키지 적용! 보상 3배 자동 지급됩니다.', 'ok');
     document.getElementById('btnAdReward') && (document.getElementById('btnAdReward').textContent = '✅ 광고 제거 패키지 보유 중');
   } else if (item === 'starter') {
-    const urPilots = S.pilots.filter(p => p.rarity === 'UR');
-    if (urPilots.length > 0) {
-      toast('✅ 스타터 패키지 수령! UR 파일럿 + 자원 지급.', 'ok');
-      give({ gold:10000, gems:100 });
-      updateCurrency();
+    give({ gold:10000, gems:100 });
+    const hasUr = S.ownedPilots.some(p => p.rarity === 'UR');
+    if (!hasUr) {
+      const base = pick(PILOT_POOL.filter(p => p.rarity === 'UR')) || PILOT_POOL[0];
+      S.ownedPilots.push({ id: 'p' + Math.random().toString(36).slice(2, 8), name: base.name, type: base.type, rarity: 'UR', level: 1 });
     }
+    updateCurrency();
+    saveState();
+    toast('스타터 패키지: 골드·다이아 지급' + (hasUr ? '' : ' (UR 영입)'), 'ok');
   } else if (item === 'season') {
     toast('🌟 시즌 패스 기능은 곧 출시됩니다!', 'warn');
   } else {
@@ -576,6 +585,41 @@ function showTitle() {
   $("battlePage").classList.add("hidden");
   $("tabbar").classList.add("hidden");
 }
+const TUTORIAL_STEPS = [
+  { title: '출격', body: '출격 탭에서 스테이지를 고릅니다. 잠긴 구역은 <b>최고 점수</b>로 해제됩니다. 무한 모드는 끝없이 점수를 올릴 수 있습니다.' },
+  { title: '편대', body: '편대에서 슬롯을 눌러 파일럿을 배치합니다. <b>선봉</b>이 먼저 피격됩니다. 상성(요격▶전폭▶건쉽)이 있습니다.' },
+  { title: '전투', body: '좌우로 이동하며 아군 탄환으로 격추하세요. <b>스페이스/폭탄</b>은 광역(조작 힌트: P 일시정지, M 로비). 드롭을 먹으면 강해집니다.' },
+  { title: '성장', body: '영웅·연구·요새·상점(다이아)에서 능력이 오릅니다. 랭킹·최근 기록은 <b>이 PC/폰</b>에만 저장됩니다(실시간 온라인 대전은 아님).' }
+];
+let _tutFromHelp = false;
+let _tutStep = 0;
+function openTutorial(fromHelp) {
+  _tutFromHelp = !!fromHelp;
+  _tutStep = 0;
+  const m = $('tutorialModal');
+  if (!m) return;
+  const title = $('tutTitle');
+  const body = $('tutBody');
+  renderTutStep();
+  m.classList.add('show');
+}
+function renderTutStep() {
+  const sk = TUTORIAL_STEPS[_tutStep];
+  if (!sk) return;
+  const title = $('tutTitle');
+  const body = $('tutBody');
+  const nextBtn = $('btnTutNext');
+  if (title) title.textContent = sk.title;
+  if (body) body.innerHTML = sk.body;
+  if (nextBtn) nextBtn.textContent = _tutStep >= TUTORIAL_STEPS.length - 1 ? '이해했습니다' : '다음';
+}
+function closeTutorial() {
+  const m = $('tutorialModal');
+  if (m) m.classList.remove('show');
+  if (!_tutFromHelp) { S.tutorialDone = true; saveState(); }
+  _tutFromHelp = false;
+}
+
 function showLobby(tab) {
   $("titlePage").classList.add("hidden");
   $("lobbyPage").classList.remove("hidden");
@@ -583,6 +627,7 @@ function showLobby(tab) {
   $("tabbar").classList.remove("hidden");
   if (tab) setTab(tab);
   renderAll();
+  if (!S.tutorialDone) setTimeout(() => openTutorial(false), 450);
 }
 function showBattle() {
   $("titlePage").classList.add("hidden");
@@ -595,9 +640,6 @@ function showBattle() {
 function setTab(name) {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   document.querySelectorAll(".section").forEach(s => s.classList.toggle("active", s.dataset.section === name));
-  /* 상점 탭 전용 페이지 토글 */
-  const shopPg = $("shopPage");
-  if (shopPg) shopPg.classList.toggle("hidden", name !== "shop");
 }
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => { playSfx("ui_click"); setTab(t.dataset.tab); renderAll(); });
@@ -875,6 +917,41 @@ function renderShop() {
   }
 }
 
+/* — 고스트 랭킹(로컬 데모, 온라인 아님) — */
+const _GHOST_RIVAL_NAMES = ['알파 기지', '브라보 함대', '찰리 연대', '델타 요새'];
+function _ghostRivalRows() {
+  const seed = (S.bestScore|0) * 17 + (S.endlessBest|0) * 400 + 1337;
+  return _GHOST_RIVAL_NAMES.map((n, i) => ({
+    name: n,
+    score: Math.max(2000, 3500 + ((seed * (i + 1) * 7 + i * 5000) % 48000))
+  })).sort((a, b) => b.score - a.score);
+}
+
+function renderRanking() {
+  const host = $('rankingBlock');
+  if (!host) return;
+  S.rankHistory = S.rankHistory || [];
+  const ghosts = _ghostRivalRows();
+  const meScore = S.bestScore || 0;
+  const versus = [
+    { name: '나 (이 기지)', score: meScore, me: true },
+    ...ghosts.map((g) => ({ name: g.name + ' · 데모', score: g.score, ghost: true }))
+  ].sort((a, b) => b.score - a.score);
+  const myPlace = 1 + versus.findIndex((r) => r.me);
+  const hist = S.rankHistory.slice(0, 6);
+  host.innerHTML = `
+    <p class="section-hint" style="margin:0 0 8px;">최고 <b>${Math.floor(meScore)}</b>점 · 무한 <b>웨이브 ${S.endlessBest || 0}</b>. 데모 기지는 실시간 대전이 아닌 <b>비교용 표시</b>입니다. 순위: <b>${myPlace}</b> / ${versus.length}</p>
+    <div class="rank-table">${versus.map((r, i) => `
+      <div class="rank-row${r.me ? ' me' : ''}">
+        <span class="rk-num">${i + 1}</span>
+        <span class="rk-name">${r.name}</span>
+        <span class="rk-score">${Math.floor(r.score)}</span>
+      </div>`).join('')}</div>
+    <h3 class="rank-sub">최근 기록 (로컬)</h3>
+    <ul class="rank-history">${hist.length ? hist.map((r) => `<li><span>${r.win ? '승' : '패'}</span> ${Math.floor(r.score)}점 · 웨${r.wave} · S${r.st || '?'}</li>`).join('') : '<li class="muted">기록이 없습니다. 한 판 끝내면 쌓입니다.</li>'}</ul>
+  `;
+}
+
 /* ============================================================
    §18  렌더링: 병원 탭  [Phase 4]
    ============================================================ */
@@ -990,7 +1067,7 @@ function renderAll() {
   updateCurrency();
   renderStages(); renderSquad(); renderHeroes();
   renderResearch(); renderFortress(); renderSkins(); renderShop();
-  renderHospital(); renderQuests();
+  renderHospital(); renderQuests(); renderRanking();
   /* 병원 탭 배지 */
   const hospitalTab = document.querySelector(".tab[data-tab='hospital']");
   if (hospitalTab) hospitalTab.querySelector(".tb-ico").textContent = S.injuredPilots>0 ? `🏥${S.injuredPilots}` : "🏥";
@@ -1136,6 +1213,8 @@ function startBattle(stage) {
 
   initBgObjects();
   refreshBattleHud();
+  _lastSimTime = 0;
+  _simAcc = 0;
 
   if (injuryPenalty > 0) toast(`부상자 ${injuryPenalty}명 — 초기 편대 감소`, "warn");
 }
@@ -2034,6 +2113,9 @@ function endBattle(win) {
   give(rew);
   if (win&&S.stageCleared<B.stage.id) S.stageCleared=B.stage.id;
   if (B.score>S.bestScore) S.bestScore=Math.floor(B.score);
+  S.rankHistory = S.rankHistory || [];
+  S.rankHistory.unshift({ score: Math.floor(B.score), wave: B.wave, st: B.stage && B.stage.id, win, t: Date.now() });
+  S.rankHistory = S.rankHistory.slice(0, 20);
   $("overRewards").innerHTML=Object.entries(rew).filter(([,v])=>v>0).map(([k,v])=>`${k} +${v}`).join(" · ")||"-";
   /* 광고 3배 버튼 표시 제어 */
   const adBtn = $('btnAdReward');
@@ -3270,19 +3352,33 @@ function draw() {
 }
 
 /* ============================================================
-   §31  게임 루프
+   §31  게임 루프 — 고정 시뮬 60Hz (모니터 주사율과 무관하게 속도 일정)
    ============================================================ */
-let _lastFrameTime = 0;
+let _lastSimTime = 0;
+let _simAcc = 0;
+const SIM_STEP_MS = 1000 / 60;
+const SIM_MAX_STEPS = 4;
 function loop(ts) {
-  /* 탭이 백그라운드면 건너뜀 (모바일 배터리/성능 보호) */
   if (document.hidden) { requestAnimationFrame(loop); return; }
+  if (!_lastSimTime) _lastSimTime = ts;
+  const dt = Math.min(48, Math.max(0, ts - _lastSimTime));
+  _lastSimTime = ts;
 
-  /* 60fps 프레임 스킵: 16ms 미만이면 렌더 건너뜀 */
-  if (ts - _lastFrameTime < 14) { requestAnimationFrame(loop); return; }
-  _lastFrameTime = ts;
-
-  update();
   const onBattle = $("battlePage") && !$("battlePage").classList.contains("hidden");
+  const canSim = onBattle && B.running && !B.paused && !B.bossPending && !_skillPickerOpen;
+  if (canSim) {
+    _simAcc += dt;
+    let steps = 0;
+    while (_simAcc >= SIM_STEP_MS && steps < SIM_MAX_STEPS) {
+      update();
+      _simAcc -= SIM_STEP_MS;
+      steps++;
+    }
+  } else {
+    if (!onBattle || !B.running) _simAcc = 0;
+    else if (B.paused || B.bossPending || _skillPickerOpen) _simAcc = 0;
+    update();
+  }
   if (onBattle) { updateGameMeshes(); updateThreeBackground(); draw(); }
   requestAnimationFrame(loop);
 }
@@ -3300,7 +3396,10 @@ function drawTitleArt() {
   const tctx=tc.getContext("2d");
   let t=0;
   function tick() {
-    if (!el.isConnected) return; t+=0.02;
+    if (!el.isConnected) return;
+    const tp = $('titlePage');
+    if (tp && tp.classList.contains('hidden')) return;
+    t += 0.02;
     tctx.clearRect(0,0,tc.width,tc.height);
     const g=tctx.createLinearGradient(0,0,0,tc.height);
     g.addColorStop(0,"#0e1f3a"); g.addColorStop(1,"#050b19");
@@ -3399,6 +3498,14 @@ function init() {
   /* 첫 상호작용 시 오디오 활성화 */
   document.addEventListener("click",   ensureAudio, { once:true });
   document.addEventListener("keydown", ensureAudio, { once:true });
+  const tNext = $('btnTutNext');
+  if (tNext) tNext.addEventListener('click', () => {
+    if (_tutStep < TUTORIAL_STEPS.length - 1) { _tutStep++; renderTutStep(); } else { closeTutorial(); }
+  });
+  const tSk = $('btnTutSkip');
+  if (tSk) tSk.addEventListener('click', () => closeTutorial());
+  const tHelp = $('btnHelp');
+  if (tHelp) tHelp.addEventListener('click', () => { ensureAudio(); playSfx('ui_click'); openTutorial(true); });
 }
 init();
 window.addEventListener("beforeunload", saveState);

@@ -19,11 +19,8 @@
 <body>
   <div id="app">
 
-    <!-- ═══════════════════════════════════════════
-         상단 리소스 바
-         ═══════════════════════════════════════════ -->
     <header class="topbar">
-      <div class="logo">라스트 워 <span>: 에어 컴뱃</span></div>
+      <div class="logo">라스트 워 <span>에어 컴뱃</span></div>
       <div class="chips">
         <div class="chip gold"><i class="icon gold"></i>골드 <b id="cGold">0</b></div>
         <div class="chip fuel"><i class="icon fuel"></i>항공유 <b id="cFuel">0</b></div>
@@ -43,11 +40,12 @@
         <div class="title-stage">
           <div class="title-brand">L A S T  W A R</div>
           <h1 class="title-main">AIR COMBAT</h1>
-          <p class="title-sub">공중 요새 · 에이스 파일럿 · 편대 증식 공중전</p>
+          <p class="title-sub">공중 요새 · 편대 · 승격 슈팅</p>
           <div class="title-art" id="titleArt"></div>
           <div class="title-btns">
             <button id="btnStart"    class="btn gold">게임 시작</button>
             <button id="btnContinue" class="btn primary">계속하기</button>
+            <button type="button" id="btnHelp" class="btn ghost">게임 설명</button>
             <button id="btnReset"    class="btn ghost">데이터 초기화</button>
           </div>
           <small class="pc-only" style="color:var(--muted)">방향키/WASD 이동 · Space 폭탄 · P 일시정지 · M 로비</small>
@@ -60,8 +58,9 @@
 
         <!-- 출격 탭 -->
         <div class="section active" data-section="sortie">
-          <h2>출격 · SORTIE</h2>
-          <p class="sub">스테이지를 선택하고 편대를 전선으로 투입하세요. 보스 스테이지는 강력한 모함이 등장합니다.</p>
+          <h2>출격</h2>
+          <p class="sub">스테이지를 고릅니다. 보스 구역은 대형 함선이 나옵니다. 잠금은 <b>최고 점수</b>로 풀립니다.</p>
+          <div id="rankingBlock" class="ranking-box"></div>
           <div class="row between" style="margin-bottom:10px;">
             <div class="row" style="gap:6px;">
               <span class="tag I">요격기</span>
@@ -76,8 +75,8 @@
 
         <!-- 편대 탭 -->
         <div class="section" data-section="squad">
-          <h2>편대 편성 · FORMATION</h2>
-          <p class="sub">선봉 2대 · 후위 3대로 5명의 에이스 파일럿을 배치합니다. 전방일수록 피격 우선.</p>
+          <h2>편대</h2>
+          <p class="sub">슬롯 5개(선봉 2·후위 3). 앞줄이 먼저 맞습니다. 추천 편성으로 전력 순 자동 배치가 가능합니다.</p>
           <div id="squadBoard" class="grid" style="grid-template-columns:repeat(5,1fr);gap:10px;"></div>
           <div style="margin-top:14px;display:flex;gap:8px;">
             <button id="btnAutoSquad"  class="btn">추천 편성</button>
@@ -88,15 +87,15 @@
 
         <!-- 영웅 탭 -->
         <div class="section" data-section="heroes">
-          <h2>에이스 파일럿 · HEROES</h2>
-          <p class="sub">파일럿을 레벨업하여 공격력과 체력을 강화합니다. 골드가 필요합니다.</p>
+          <h2>영웅</h2>
+          <p class="sub">골드로 레벨을 올려 공격·체력이 오릅니다. 등급(N~UR)에 따라 성장 폭이 다릅니다.</p>
           <div id="heroList" class="hero-list"></div>
         </div>
 
         <!-- 스카우트 탭 -->
         <div class="section" data-section="scout">
-          <h2>레이더 스카우트 · GACHA</h2>
-          <p class="sub">UR/SR 등급의 에이스 파일럿과 전용 기체 도면을 영입합니다.</p>
+          <h2>레이더 스카우트</h2>
+          <p class="sub">다이아로 파일럿을 뽑습니다(확률: N 55%·R 30%·SR 12%·UR 3%). 10연은 SR 이상 1회 포함.</p>
           <div class="scout-wrap">
             <div class="scout-card">
               <h3 style="margin:0;">단일 스카우트</h3>
@@ -114,22 +113,22 @@
 
         <!-- 연구 탭 -->
         <div class="section" data-section="research">
-          <h2>항공 연구소 · AERO LAB</h2>
-          <p class="sub">엔진 · 무기 · 장갑 · 편대 대형을 연구하여 전투력을 영구 강화합니다.</p>
+          <h2>연구</h2>
+          <p class="sub">합금으로 엔진·무기·장갑·편대 연구. 전투 밖에서도 영구 보너스가 붙습니다.</p>
           <div id="researchList" class="upgrade-list"></div>
         </div>
 
         <!-- 요새 탭 -->
         <div class="section" data-section="fortress">
-          <h2>공중 요새 · SKY FORTRESS</h2>
-          <p class="sub">하늘 위를 떠다니는 당신의 거점을 건설하고 확장하세요.</p>
+          <h2>요새</h2>
+          <p class="sub">골드·항공유로 건물을 올려 출격 인원·자원 생산 등이 늘어납니다. 관제탑이 다른 건물 상한을 정합니다.</p>
           <div id="fortressList" class="upgrade-list"></div>
         </div>
 
         <!-- 스킨 탭 -->
         <div class="section" data-section="skins">
-          <h2>스킨 · SKINS</h2>
-          <p class="sub">기체 외관을 변경합니다. 일부 스킨은 소폭의 버프를 포함합니다.</p>
+          <h2>스킨</h2>
+          <p class="sub">다이아로 도색·요새 외형을 삽니다. 일부는 작은 전투 보너스가 있습니다.</p>
           <h3 style="margin:10px 0 6px;font-size:15px;">기체 스킨</h3>
           <div id="jetSkinList" class="skin-list"></div>
           <h3 style="margin:14px 0 6px;font-size:15px;">공중 요새 스킨</h3>
@@ -138,24 +137,24 @@
 
         <!-- 상점 탭 -->
         <div class="section" data-section="shop">
-          <h2>상점 · SHOP</h2>
-          <p class="sub">다이아로 전투 자원을 구매합니다.</p>
+          <h2>상점</h2>
+          <p class="sub">다이아로 자원을 삽니다. 아래 결제·광고 버튼은 시뮬레이션입니다.</p>
           <div id="shopList" class="shop-row"></div>
-          <h3 style="margin:16px 0 6px;">시즌 패스 · SEASON PASS</h3>
+          <h3 class="h3-compact">시즌 패스</h3>
           <div id="passList" class="pass-row"></div>
         </div>
 
         <!-- 병원 탭 [Phase 4] -->
         <div class="section" data-section="hospital">
-          <h2>병원 · HOSPITAL</h2>
-          <p class="sub">전투에서 부상당한 파일럿을 치료합니다. 부상자가 있으면 출격 시 편대 수가 감소합니다.</p>
+          <h2>병원</h2>
+          <p class="sub">패배 시 부상이 쌓이면 출격 편대가 줄어듭니다. 합금으로 치료하세요.</p>
           <div id="hospitalContent"></div>
         </div>
 
         <!-- 퀘스트 탭 [Phase 2] -->
         <div class="section" data-section="quests">
-          <h2>일일 퀘스트 · DAILY</h2>
-          <p class="sub">매일 자정 초기화됩니다. 완료 시 다이아·자원을 보상으로 받습니다.</p>
+          <h2>일일 퀘스트</h2>
+          <p class="sub">날짜가 바뀌면 목표가 갱신됩니다. 달성 후 수령 버튼으로 보상을 받습니다.</p>
           <div id="questContent"></div>
         </div>
 
@@ -261,94 +260,6 @@
     </div>
 
     <!-- ═══════════════════════════════════════════
-         상점 페이지
-         ═══════════════════════════════════════════ -->
-    <section id="shopPage" class="page hidden">
-      <div class="panel">
-        <h2 class="panel-title">🛒 상점</h2>
-
-        <div class="shop-section">
-          <div class="shop-section-title">🔥 베스트셀러</div>
-          <div class="shop-grid">
-            <div class="shop-card featured">
-              <div class="shop-badge">BEST</div>
-              <div class="shop-icon">🚫📺</div>
-              <div class="shop-name">광고 제거 패키지</div>
-              <div class="shop-desc">보상 3배를 광고 없이 즉시 획득<br>영구적으로 적용됩니다</div>
-              <button class="btn gold shop-btn" onclick="shopBuy('no_ads')">₩2,200</button>
-            </div>
-            <div class="shop-card featured">
-              <div class="shop-badge">NEW</div>
-              <div class="shop-icon">🎖</div>
-              <div class="shop-name">스타터 패키지</div>
-              <div class="shop-desc">UR 파일럿 1명 + 골드 10,000<br>+ 다이아 100개 즉시 지급</div>
-              <button class="btn gold shop-btn" onclick="shopBuy('starter')">₩3,300</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="shop-section">
-          <div class="shop-section-title">💎 다이아 패키지</div>
-          <div class="shop-grid gem-grid">
-            <div class="shop-card gem-card" onclick="shopBuy('gem60')">
-              <div class="shop-icon small">💎</div>
-              <div class="shop-name">60 다이아</div>
-              <div class="shop-price">₩1,100</div>
-            </div>
-            <div class="shop-card gem-card" onclick="shopBuy('gem330')">
-              <div class="shop-icon small">💎×5</div>
-              <div class="shop-name">330 다이아</div>
-              <div class="shop-price">₩5,500</div>
-            </div>
-            <div class="shop-card gem-card" onclick="shopBuy('gem680')">
-              <div class="shop-icon small">💎×10</div>
-              <div class="shop-name">680 다이아</div>
-              <div class="shop-price">₩11,000</div>
-            </div>
-            <div class="shop-card gem-card" onclick="shopBuy('gem1400')">
-              <div class="shop-icon small">💎×20</div>
-              <div class="shop-name">1,400 다이아</div>
-              <div class="shop-price">₩22,000</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="shop-section">
-          <div class="shop-section-title">📺 무료 광고 보상</div>
-          <div class="shop-grid">
-            <div class="shop-card ad-card">
-              <div class="shop-icon">🎁</div>
-              <div class="shop-name">무료 스카우트</div>
-              <div class="shop-desc">광고 시청 후 파일럿 스카우트 1회<br>하루 3회 가능</div>
-              <button class="btn shop-btn" id="btnAdScout" onclick="shopAdScout()">📺 광고 보기</button>
-            </div>
-            <div class="shop-card ad-card">
-              <div class="shop-icon">⚡</div>
-              <div class="shop-name">골드 2배</div>
-              <div class="shop-desc">광고 시청 후 골드 +5,000<br>하루 5회 가능</div>
-              <button class="btn shop-btn" id="btnAdGold" onclick="shopAdGold()">📺 광고 보기</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="shop-section">
-          <div class="shop-section-title">🏆 시즌 패스</div>
-          <div class="shop-card season-pass">
-            <div class="season-pass-inner">
-              <div>
-                <div class="shop-name" style="font-size:16px;">시즌 패스 Premium</div>
-                <div class="shop-desc">매일 다이아 30개 + 무료 보상의 5배<br>시즌 한정 UR 스킨 지급</div>
-              </div>
-              <button class="btn gold shop-btn" onclick="shopBuy('season')">₩8,800/월</button>
-            </div>
-          </div>
-        </div>
-
-        <p class="shop-notice">※ 결제 기능은 출시 후 활성화됩니다. 광고 보상은 시뮬레이션 모드로 동작합니다.</p>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════
          모달: 오프라인 방치 보상  [Phase 2]
          ═══════════════════════════════════════════ -->
     <div id="offlineModal" class="modal-backdrop">
@@ -360,7 +271,17 @@
       </div>
     </div>
 
-    <!-- 토스트 알림 -->
+    <div id="tutorialModal" class="modal-backdrop">
+      <div class="modal tut-modal">
+        <h3 id="tutTitle" class="tut-h3">안내</h3>
+        <p id="tutBody" class="tut-body"></p>
+        <div class="tut-actions">
+          <button type="button" id="btnTutSkip" class="btn ghost">건너뛰기</button>
+          <button type="button" id="btnTutNext" class="btn primary">다음</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
   </div><!-- /#app -->

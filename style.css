@@ -60,7 +60,7 @@ body {
   height: 100dvh;
   height: 100vh; /* fallback first, then overridden by dvh where supported */
   display: grid;
-  grid-template-rows: 54px 1fr 58px;
+  grid-template-rows: 44px 1fr 48px;
   background: var(--bg-1);
   border-left: 1px solid var(--line-soft);
   border-right: 1px solid var(--line-soft);
@@ -91,8 +91,8 @@ body {
   grid-row: 1;
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  gap: 10px;
+  padding: 0 8px 0 10px;
+  gap: 6px;
   background: linear-gradient(180deg, #0c1a30 0%, #0a1527 100%);
   border-bottom: 1px solid var(--line-soft);
   z-index: 4;
@@ -100,10 +100,10 @@ body {
 
 .logo {
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 0.5px;
   color: var(--gold);
-  font-size: 15px;
-  text-shadow: 0 0 8px rgba(255, 200, 87, 0.35);
+  font-size: 13px;
+  text-shadow: none;
 }
 
 .logo span {
@@ -122,13 +122,13 @@ body {
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(14, 28, 50, 0.85);
+  gap: 4px;
+  background: rgba(14, 28, 50, 0.75);
   border: 1px solid var(--line);
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 13px;
-  min-width: 72px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  min-width: 0;
   justify-content: center;
 }
 
@@ -185,12 +185,12 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 1px;
   cursor: pointer;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: 0;
   user-select: none;
   transition: color 0.15s;
   border-right: 1px solid var(--line-soft);
@@ -201,9 +201,9 @@ body {
 }
 
 .tab .tb-ico {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   background: linear-gradient(160deg, #25406b 0%, #13253f 100%);
   border: 1px solid var(--line);
   display: grid;
@@ -380,7 +380,7 @@ body {
   inset: 0;
   display: none;
   flex-direction: column;
-  padding: 14px 16px;
+  padding: 8px 10px 10px;
   overflow: auto;
 }
 
@@ -390,9 +390,40 @@ body {
 
 .section h2 {
   margin: 0 0 4px;
-  font-size: 20px;
-  letter-spacing: 0.4px;
+  font-size: 17px;
+  letter-spacing: 0;
 }
+.h3-compact { margin: 10px 0 5px; font-size: 14px; font-weight: 700; }
+.section-hint { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.ranking-box {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.rank-sub { font-size: 12px; margin: 10px 0 4px; color: var(--sky); }
+.rank-table { display: flex; flex-direction: column; gap: 2px; }
+.rank-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 72px;
+  align-items: center;
+  font-size: 12px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.2);
+}
+.rank-row.me { outline: 1px solid var(--gold); background: rgba(255, 200, 87, 0.08); }
+.rk-num { color: var(--muted); font-size: 11px; }
+.rk-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-score { text-align: right; font-weight: 700; color: var(--gold); }
+ul.rank-history { margin: 4px 0 0; padding: 0 0 0 16px; color: var(--text); font-size: 12px; line-height: 1.5; }
+ul.rank-history .muted { color: var(--muted); list-style: none; margin-left: -12px; }
+.tut-modal { max-width: 400px; }
+.tut-h3 { margin: 0 0 8px; color: var(--sky); }
+.tut-body { color: var(--text); line-height: 1.55; font-size: 14px; margin: 0 0 12px; min-height: 3em; }
+.tut-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
 .section .sub {
   color: var(--muted);
@@ -679,8 +710,8 @@ body {
 .shop-row,
 .pass-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
 }
 
 /* ============================================================
@@ -715,32 +746,32 @@ body {
 /* 전투 HUD */
 #battleHud {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
+  top: 6px;
+  left: 6px;
+  right: 6px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 6px;
+  gap: 4px;
   pointer-events: none;
-  font-size: 13px;
+  font-size: 10.5px;
   z-index: 2;
 }
 
 .hud-card {
-  background: rgba(4, 10, 22, 0.88);
-  border: 2px solid rgba(78, 180, 255, 0.60);
-  border-radius: 10px;
-  padding: 7px 12px;
+  background: rgba(4, 10, 22, 0.90);
+  border: 1px solid rgba(78, 180, 255, 0.45);
+  border-radius: 7px;
+  padding: 4px 7px;
   color: #ffffff;
-  font-weight: 700;
-  backdrop-filter: blur(8px);
+  font-weight: 600;
+  backdrop-filter: blur(4px);
   pointer-events: auto;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(100,180,255,0.15);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.45);
 }
 
-.hud-card b { color: #ffe066; text-shadow: 0 0 8px rgba(255,200,50,0.6); }
+.hud-card b { color: #ffe066; }
 
 #battleButtons {
   position: absolute;
@@ -1305,17 +1336,6 @@ body {
    상점 페이지
    ════════════════════════════════════════════════════ */
 .shop-tab { position: relative; }
-.shop-tab::after {
-  content: 'NEW';
-  position: absolute;
-  top: 2px; right: 2px;
-  font-size: 7px;
-  background: var(--red);
-  color: #fff;
-  padding: 1px 4px;
-  border-radius: 4px;
-  font-weight: 700;
-}
 .shop-section { margin-bottom: 20px; }
 .shop-section-title {
   font-size: 13px;
