@@ -53,6 +53,22 @@ function toast(msg, kind = "ok") {
   el._t = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
+/* loadState/newState보다 먼저 초기화되어야 함 (const는 호이스팅 안 됨) */
+const RESOURCE_CAP = 999999999;
+function formatResDisplay(v) {
+  const n = Math.floor(Number(v));
+  if (!Number.isFinite(n)) return "0";
+  const c = Math.max(0, Math.min(RESOURCE_CAP, n));
+  return c.toLocaleString("ko-KR");
+}
+function sanitizeSaveResources(s) {
+  if (!s) return;
+  for (const k of ["gold", "fuel", "alloy", "gems"]) {
+    const x = Math.floor(Number(s[k]));
+    s[k] = Number.isFinite(x) ? Math.max(0, Math.min(RESOURCE_CAP, x)) : 0;
+  }
+}
+
 /* ============================================================
    §2  정적 데이터
    ============================================================ */
@@ -362,21 +378,6 @@ const SQUAD_MERGE_THRESHOLD = 170;
 const SQUAD_BADGE_MIN       = 100;
 const GATE_MULT_ABS_MAX     = 1.35; /* 곱하기 절대 상한 */
 const GATE_FIXED_DIVISOR    = 2;    /* 나누기 고정 (÷2) */
-
-const RESOURCE_CAP = 999999999;
-function formatResDisplay(v) {
-  const n = Math.floor(Number(v));
-  if (!Number.isFinite(n)) return "0";
-  const c = Math.max(0, Math.min(RESOURCE_CAP, n));
-  return c.toLocaleString("ko-KR");
-}
-function sanitizeSaveResources(s) {
-  if (!s) return;
-  for (const k of ["gold", "fuel", "alloy", "gems"]) {
-    const x = Math.floor(Number(s[k]));
-    s[k] = Number.isFinite(x) ? Math.max(0, Math.min(RESOURCE_CAP, x)) : 0;
-  }
-}
 
 let _mergeFlashFrames = 0;
 let _lastMergeVisual  = false;
