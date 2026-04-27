@@ -28,6 +28,11 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
 html,
 body {
   margin: 0;
@@ -36,6 +41,8 @@ body {
   color: var(--text);
   font-family: "Pretendard", "Segoe UI", "Malgun Gothic", sans-serif;
   height: 100%;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
   overflow: hidden;
   /* iOS Safari 풀-투-리프레시 방지 */
   overscroll-behavior: none;
@@ -54,6 +61,7 @@ body {
 
 /* ---------- 앱 컨테이너 ---------- */
 #app {
+  touch-action: manipulation; /* 모바일 더블탭 줌 지연 완화 */
   width: min(1180px, 100vw);
   /* 100dvh: 모바일 주소창 제외 실제 뷰포트 높이 (iOS 15.4+, Android 108+)
      폴백: 100vh (구형 브라우저) */
@@ -89,13 +97,14 @@ body {
    ============================================================ */
 .topbar {
   grid-row: 1;
+  position: relative;
   display: flex;
   align-items: center;
   padding: 0 8px 0 10px;
   gap: 6px;
   background: linear-gradient(180deg, #0c1a30 0%, #0a1527 100%);
   border-bottom: 1px solid var(--line-soft);
-  z-index: 4;
+  z-index: 20; /* 전투 캔버스·모달보다 위 — 재화 칩이 항상 보이게 */
 }
 
 .logo {
@@ -162,6 +171,7 @@ body {
   grid-row: 2;
   position: relative;
   overflow: hidden;
+  min-height: 0; /* 모바일 그리드 안에서 전투 영역이 줄어들 수 있게 */
 }
 
 /* ============================================================
@@ -707,12 +717,53 @@ body {
   align-items: stretch;
   justify-content: stretch;
   z-index: 5;
+  min-height: 0;
 }
 
 #battleWrap {
   flex: 1;
   position: relative;
+  min-height: 0;
+  touch-action: none; /* 드래그 이동 시 브라우저 스크롤·제스처 간섭 방지 */
+  /* iOS PWA / 노치: 세이프 존은 캔버스 패딩이 아닌 래퍼가 전체를 씀 */
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
 }
+
+/* 전투 중 재화 미니 바 — 상단 칩과 동일 숫자, 픽업 직후 확인용 */
+.battle-currency-bar {
+  position: absolute;
+  top: 40px;
+  right: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 8px;
+  max-width: min(340px, 92vw);
+  padding: 4px 8px;
+  background: rgba(4, 10, 22, 0.88);
+  border: 1px solid rgba(78, 180, 255, 0.4);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  z-index: 2;
+  pointer-events: none;
+  font-size: 10px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+.battle-currency-bar .bc-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #e8f2ff;
+}
+.battle-currency-bar .bc-item b {
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5em;
+  text-align: right;
+}
+.battle-currency-bar .icon { flex-shrink: 0; }
 
 /* Three.js 캔버스 — 2D 모드에서는 숨김 */
 #bg3d {
@@ -871,6 +922,7 @@ body {
 .toast {
   position: absolute;
   bottom: 88px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0));
   left: 50%;
   transform: translateX(-50%);
   background: rgba(12, 24, 48, 0.92);
@@ -883,7 +935,11 @@ body {
   opacity: 0;
   transition: opacity 0.25s;
   pointer-events: none;
-  white-space: nowrap;
+  max-width: min(420px, 92vw);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.45);
 }
 
 .toast.show {
@@ -953,7 +1009,7 @@ body {
    ============================================================ */
 #mobileBattleCtrl {
   position: absolute;
-  bottom: 70px;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0));
   left: 0; right: 0;
   display: flex;
   justify-content: space-between;

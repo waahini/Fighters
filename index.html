@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -171,6 +172,13 @@
             <div class="hud-card">스테이지 <b id="bStage">1</b> · 웨이브 <b id="bWave">1</b></div>
             <div class="hud-card">편대 <b id="bSquad">0</b> / 격추 <b id="bKills">0</b> / 점수 <b id="bScore">0</b></div>
             <div class="hud-card">LV <b id="bWeapon">1</b> · <b id="bHp">정상</b> · 진화 <b id="bEvo" style="color:#8ab8d8">기본</b></div>
+          </div>
+
+          <div id="battleCurrencyBar" class="battle-currency-bar" aria-label="전투 중 자원">
+            <span class="bc-item"><i class="icon gold"></i><b id="bcGold">0</b></span>
+            <span class="bc-item"><i class="icon fuel"></i><b id="bcFuel">0</b></span>
+            <span class="bc-item"><i class="icon alloy"></i><b id="bcAlloy">0</b></span>
+            <span class="bc-item"><i class="icon gem"></i><b id="bcGem">0</b></span>
           </div>
 
           <div id="weatherIndicator">🌤 맑음</div>

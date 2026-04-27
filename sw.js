@@ -1,5 +1,5 @@
 /* 라스트 워 : 에어 컴뱃 — Service Worker (오프라인 캐시) */
-const CACHE = "lastwar-v1";
+const CACHE = "lastwar-v4";
 const ASSETS = [
   "./",
   "./index.html",

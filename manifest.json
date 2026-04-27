@@ -4,7 +4,7 @@
   "description": "공중 요새 · 에이스 파일럿 · 편대 증식 공중전",
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#05080f",
   "theme_color": "#05080f",
   "lang": "ko",
