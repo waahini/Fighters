@@ -373,14 +373,11 @@ const _fever = {
 /* 편대·게이트 밸런스 */
 const SQUAD_HARD_CAP        = 200;
 /* 압축 편대(거대기+호위) — 상한에 가까울 때만 전환 (소량 +만으로는 뭉치지 않음) */
-const SQUAD_MERGE_THRESHOLD = 170;
 /* 기체 아래 ×N 뱃지 — 이 인원 이상일 때만 표시 */
 const SQUAD_BADGE_MIN       = 100;
 const GATE_MULT_ABS_MAX     = 1.35; /* 곱하기 절대 상한 */
 const GATE_FIXED_DIVISOR    = 2;    /* 나누기 고정 (÷2) */
 
-let _mergeFlashFrames = 0;
-let _lastMergeVisual  = false;
 let _lastBattleCurrencySync = 0;
 
 function _triggerFeverIfFull() {
@@ -1307,8 +1304,6 @@ function startBattle(stage) {
   const base = 1 + (S.fortress.deck-1) + placed.length - injuryPenalty;
   B.maxSquad = SQUAD_HARD_CAP;
   B.squad    = Math.min(B.maxSquad, Math.max(1, base));
-  _mergeFlashFrames = 0;
-  _lastMergeVisual  = B.squad > SQUAD_MERGE_THRESHOLD;
   B.weaponLv = 1;
   B.baseAtk  = 9 + (S.research.weapon-1)*0.6;
   B.evolutionLv  = 0;
@@ -1581,7 +1576,7 @@ function playerShoot() {
   const atkBonus=formationAtkBonus();
   const allies=B._allies.slice(0, MAX_SHOOT_ALLIES);  /* 발사 아군 상한 */
   const emitN = Math.max(1, allies.length);
-  /* 압축 편대(소수 정예)일 때 기수당 데미지가 전체 편대 인원에 비례 */
+  /* 발사 기체 수는 상한 고정 — 인원은 데미지 스케일로만 반영 (성능 일정) */
   const dmgScale = B.squad > emitN ? B.squad / emitN : 1.0;
   const baseDmg=(B.baseAtk*(1+(B.weaponLv-1)*0.35)+atkBonus*0.25)*dmgScale;
   const bspeed=10+B.weaponLv*0.7;
@@ -1626,7 +1621,7 @@ function playerShoot() {
   const bdmg = _skillState.giantBullets ? baseDmg * 1.5 * dmgMult : baseDmg * dmgMult;
 
   if (_skillState.dualShot) {
-    const dualCap = Math.min(allies.length, 48);
+    const dualCap = Math.min(allies.length, 6);
     const dualAllies = allies.slice(0, dualCap);
     const dualScale = allies.length > dualCap ? allies.length / dualCap : 1;
     for (const ally of dualAllies) {
@@ -1635,7 +1630,7 @@ function playerShoot() {
     }
   }
   if (_skillState.tripleShot) {
-    const triCap = Math.min(allies.length, 40);
+    const triCap = Math.min(allies.length, 5);
     const triAllies = allies.slice(0, triCap);
     const triScale = allies.length > triCap ? allies.length / triCap : 1;
     for (const ally of triAllies) {
@@ -1655,30 +1650,15 @@ function playerShoot() {
 
   playSfx("shoot");
 }
-/* 성능용 상한 — 실제 편대는 SQUAD_HARD_CAP(200)으로 클램프 */
-const MAX_LOGIC_ALLIES  = 220;
-const MAX_VISUAL_ALLIES = 96;
-const MAX_SHOOT_ALLIES  = 120;
+/* 성능: 아군 수와 무관하게 연산·탄 수 일정 (표시·충돌·발사 모두 상한) */
+const MAX_LOGIC_ALLIES  = 24;
+const MAX_VISUAL_ALLIES = 18;
+const MAX_SHOOT_ALLIES  = 8;
 /* 무기 LV 상한 (HUD 숫자·파워업 누적) */
 const WEAPON_LV_CAP     = 999;
 
 function getAllyPositions(limit) {
   if (B.squad<=0) return [];
-  /* 100기 초과: 거대 폭격기 1 + 정예 호위 4 (시각만 압축, 스탯은 B.squad 기준) */
-  if (B.squad > SQUAD_MERGE_THRESHOLD) {
-    const leader = { x:B.player.x, y:B.player.y, meta:{ type:"bomber", mergedCommand:true } };
-    const r = 56;
-    const positions = [leader];
-    for (let i = 0; i < 4; i++) {
-      const ang = (i / 4) * Math.PI * 2 + 0.55;
-      positions.push({
-        x: B.player.x + Math.cos(ang) * r,
-        y: B.player.y + Math.sin(ang) * r * 0.48 + 10,
-        meta: { type: i % 2 ? "gunship" : "interceptor", mergedEscort:true }
-      });
-    }
-    return positions;
-  }
   const n = Math.min(B.squad, limit ?? MAX_LOGIC_ALLIES);
   const leader={ x:B.player.x, y:B.player.y, meta:{ type:B.startFormation[0]?.type||"interceptor" } };
   const positions=[leader];
@@ -1840,23 +1820,12 @@ function useBomb() {
 function update() {
   if (!B.running || B.paused || B.bossPending) return;
 
-  /* 편대 압축 진화 / 전개 전환 연출 */
-  const mergeNow = B.squad > SQUAD_MERGE_THRESHOLD;
-  if (_lastMergeVisual && !mergeNow) toast("편대 전개 — 전 기체 복귀", "info");
-  if (!_lastMergeVisual && mergeNow) {
-    _mergeFlashFrames = 22;
-    triggerShake(12, 16);
-    toast("★ 편대 압축 — 정예 전력 집결!", "gold");
-  }
-  _lastMergeVisual = mergeNow;
-  if (_mergeFlashFrames > 0) _mergeFlashFrames--;
-
   /* 힛스탑 — 큰 타격 시 N프레임 일시 정지 */
   if (_hitstop > 0) { _hitstop--; return; }
 
   /* 총알 수 상한 (성능 보호) */
-  if (B.bullets.length > 8000)     B.bullets.splice(0, B.bullets.length - 8000);
-  if (B.enemyBullets.length > 2500) B.enemyBullets.splice(0, B.enemyBullets.length - 2500);
+  if (B.bullets.length > 900)      B.bullets.splice(0, B.bullets.length - 900);
+  if (B.enemyBullets.length > 700) B.enemyBullets.splice(0, B.enemyBullets.length - 700);
 
   /* 피버 타임 갱신 */
   if (_fever.active) {
@@ -1944,7 +1913,7 @@ function update() {
 
   /* 자동 사격 — 총알이 너무 많으면 스킵해 성능 보호 */
   if (p.fireCd>0) p.fireCd--;
-  const maxBulletsForFire = Math.min(4000, 500 + B.weaponLv * 12);
+  const maxBulletsForFire = Math.min(420, 320 + Math.min(B.weaponLv, 99) * 4);
   const baseFireInt = Math.max(3, 10 - B.weaponLv);
   const fireInt = _skillState.rapidFire ? Math.max(2, Math.floor(baseFireInt * 0.62)) : baseFireInt;
   if (p.fireCd<=0 && B.bullets.length < maxBulletsForFire) { playerShoot(); p.fireCd = fireInt; }
@@ -2388,8 +2357,6 @@ function update() {
    ============================================================ */
 function endBattle(win) {
   B.running=false;
-  _lastMergeVisual = false;
-  _mergeFlashFrames = 0;
   /* 잔존 3D 메쉬 일괄 정리 (메모리 누수 방지) */
   for (const e of B.enemies)      clearMesh(e);
   for (const b of B.bullets)      clearMesh(b);
@@ -3347,32 +3314,25 @@ function draw() {
   const _allyDraw = B._allies || [];
   const _sq = B.squad || 0;
   const _evoScale = _sq >= 50 ? 1.28 : _sq >= 30 ? 1.16 : _sq >= 10 ? 1.06 : 1.0;
-  const mergeVisual = _sq > SQUAD_MERGE_THRESHOLD;
-  const _drawLimit = mergeVisual ? _allyDraw.length : Math.min(_allyDraw.length, MAX_VISUAL_ALLIES);
+  const _drawLimit = Math.min(_allyDraw.length, MAX_VISUAL_ALLIES);
 
   for (let i = 0; i < _drawLimit; i++) {
     const a = _allyDraw[i];
-    let sz = 28 * _evoScale;
-    let type = a.meta?.type || 'interceptor';
-    if (mergeVisual && i === 0) {
-      sz = 33 * _evoScale * 2.05;
-      type = "bomber";
-    } else if (mergeVisual && i > 0) {
-      sz = 24 * _evoScale * 1.12;
-    }
+    const sz = 28 * _evoScale;
+    const type = a.meta?.type || 'interceptor';
     if (i === 0) {
       /* 리더: 풀 품질 + 진화 글로우 (1번만 실행) */
-      if (_sq >= 50 || mergeVisual) {
+      if (_sq >= 50) {
         ctx.save();
-        ctx.shadowBlur = mergeVisual ? 26 : 20;
-        ctx.shadowColor = mergeVisual ? "#ffd76a" : `hsl(${(performance.now()*0.18)%360},100%,55%)`;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = `hsl(${(performance.now()*0.18)%360},100%,55%)`;
       } else if (_sq >= 30) {
         ctx.save(); ctx.shadowBlur = 14; ctx.shadowColor = "#ffd76a";
       } else if (_sq >= 10) {
         ctx.save(); ctx.shadowBlur = 8;  ctx.shadowColor = "#4eb4ff";
       }
       drawAllyJet(a.x, a.y, sz, sz * 1.36, type, true);
-      if (_sq >= 10 || mergeVisual) { ctx.shadowBlur = 0; ctx.restore(); }
+      if (_sq >= 10) { ctx.shadowBlur = 0; ctx.restore(); }
     } else {
       /* 비리더: 오프스크린 캐시 이미지 — drawImage 1번으로 처리 */
       drawAllySprite(a.x, a.y, type, sz);
@@ -3768,15 +3728,6 @@ function draw() {
   vig.addColorStop(1, "rgba(0,0,0,0.18)");
   ctx.fillStyle = vig;
   ctx.fillRect(0,0,W,H);
-
-  /* 편대 압축 순간 번쩍 연출 */
-  if (_mergeFlashFrames > 0) {
-    ctx.save();
-    const flashA = Math.min(0.45, (_mergeFlashFrames / 22) * 0.4);
-    ctx.fillStyle = `rgba(255,252,235,${flashA})`;
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
-  }
 
   ctx.restore(); // shake 복원
 }
