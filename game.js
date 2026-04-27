@@ -35,6 +35,15 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rand  = (a, b) => a + Math.random() * (b - a);
 const pick  = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
+/* UI: 보상·자원 한글 표기 */
+const RES_NAME = { gold: '골드', fuel: '항공유', alloy: '합금', gems: '다이아' };
+function fmtRewardLine(bundle) {
+  if (!bundle || !Object.keys(bundle).length) return '—';
+  return Object.entries(bundle)
+    .map(([k, v]) => (k === 'scout' ? `랜덤 영입 ${v}회` : `${RES_NAME[k] || k} +${v}`))
+    .join(' · ');
+}
+
 function toast(msg, kind = "ok") {
   const el = $("toast");
   el.textContent = msg;
@@ -78,7 +87,7 @@ const STAGES = [
   { id:4, name:"제4구역 · 궤도 방어선",      enemyTier:4, waves:8,  boss:false, unlock:800,  rewards:{ gold:360, fuel:120, alloy:35 } },
   { id:5, name:"제5구역 · 외계 모함",        enemyTier:5, waves:10, boss:true,  unlock:2000, rewards:{ gold:560, fuel:180, alloy:60, gems:4 } },
   { id:6, name:"제6구역 · 천공의 지배자",    enemyTier:6, waves:12, boss:true,  unlock:5000, weather:"magnetic", rewards:{ gold:900, fuel:280, alloy:100, gems:8 } },
-  { id:99, name:"∞ 무한 모드 · ENDLESS",    enemyTier:1, waves:9999, boss:false, unlock:0, endless:true, rewards:{ gold:30, fuel:15, alloy:6 } }
+  { id:99, name:"∞ 무한 모드", enemyTier:1, waves:9999, boss:false, unlock:0, endless:true, rewards:{ gold:30, fuel:15, alloy:6 } }
 ];
 
 const RESEARCH = [
@@ -107,12 +116,12 @@ const FORT_SKINS = [
   { id:"alien",   name:"외계 비행선", price:3000, buff:{ goldRate:30, atk:10 }, icon:"🛸" }
 ];
 const SHOP_ITEMS = [
-  { id:"fuelS",   name:"항공유 소 (100)",    cost:10,  give:{ fuel:100  } },
-  { id:"fuelL",   name:"항공유 대 (600)",    cost:50,  give:{ fuel:600  } },
-  { id:"alloyS",  name:"합금 소 (60)",        cost:15,  give:{ alloy:60  } },
-  { id:"alloyL",  name:"합금 대 (400)",       cost:80,  give:{ alloy:400 } },
-  { id:"goldS",   name:"골드 (2000)",         cost:30,  give:{ gold:2000 } },
-  { id:"starter", name:"에이스 팩 (파일럿×3)", cost:200, give:{ scout:3   } }
+  { id:"fuelS",   name:"항공유 팩(소)",   detail:"요새·출격에 쓰는 항공유 100",        cost:10,  give:{ fuel:100  } },
+  { id:"fuelL",   name:"항공유 팩(대)",   detail:"대량 항공유 600",                   cost:50,  give:{ fuel:600  } },
+  { id:"alloyS",  name:"합금 팩(소)",     detail:"연구·치료에 쓰는 합금 60",         cost:15,  give:{ alloy:60  } },
+  { id:"alloyL",  name:"합금 팩(대)",     detail:"합금 400",                        cost:80,  give:{ alloy:400 } },
+  { id:"goldS",   name:"골드 꾸러미",     detail:"영웅 레벨업용 골드 2000",         cost:30,  give:{ gold:2000 } },
+  { id:"starter", name:"에이스 보급",     detail:"랜덤 영입권 3회 (파일럿 추가)",     cost:200, give:{ scout:3   } }
 ];
 const SEASON_PASS = [
   { tier:1, kills:10,  rewards:{ gold:300  } },
@@ -160,9 +169,7 @@ function newState() {
     dailyCompleted:[],
     /* Phase 3 */
     endlessBest:0,
-    /* v4: 튜토리얼·로컬 랭킹 */
-    tutorialDone: false,
-    rankHistory: [] /* { score, wave, st, win, t } */
+    tutorialDone: false
   };
 }
 
@@ -171,8 +178,8 @@ function loadState() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return newState();
     const s = Object.assign(newState(), JSON.parse(raw));
-    if (!Array.isArray(s.rankHistory)) s.rankHistory = [];
     if (typeof s.tutorialDone !== 'boolean') s.tutorialDone = (s.bestScore|0) > 50;
+    delete s.rankHistory;
     return s;
   } catch { return newState(); }
 }
@@ -586,10 +593,10 @@ function showTitle() {
   $("tabbar").classList.add("hidden");
 }
 const TUTORIAL_STEPS = [
-  { title: '출격', body: '출격 탭에서 스테이지를 고릅니다. 잠긴 구역은 <b>최고 점수</b>로 해제됩니다. 무한 모드는 끝없이 점수를 올릴 수 있습니다.' },
-  { title: '편대', body: '편대에서 슬롯을 눌러 파일럿을 배치합니다. <b>선봉</b>이 먼저 피격됩니다. 상성(요격▶전폭▶건쉽)이 있습니다.' },
-  { title: '전투', body: '좌우로 이동하며 아군 탄환으로 격추하세요. <b>스페이스/폭탄</b>은 광역(조작 힌트: P 일시정지, M 로비). 드롭을 먹으면 강해집니다.' },
-  { title: '성장', body: '영웅·연구·요새·상점(다이아)에서 능력이 오릅니다. 랭킹·최근 기록은 <b>이 PC/폰</b>에만 저장됩니다(실시간 온라인 대전은 아님).' }
+  { title: '1. 출격', body: '출격에서 스테이지를 고릅니다. 잠긴 맵은 <b>최고 점수</b>로 열립니다. 무한은 끝없이 버티며 기록을 남깁니다.' },
+  { title: '2. 편대', body: '편대 탭에서 빈 슬롯을 눌러 파일럿을 넣습니다. <b>앞줄</b>이 먼저 맞습니다. 요격 → 전폭 → 건쉽 상성이 있습니다.' },
+  { title: '3. 전투', body: '좌우 이동으로 탄을 피하고 적을 격추합니다. <b>스페이스</b>는 광역(P 일시정지 · M 로비). 드롭·게이트로 강해집니다.' },
+  { title: '4. 성장', body: '영웅·연구·요새·스킨·상점은 기지를 키웁니다. 진행은 <b>이 기기</b>에만 저장됩니다. (인터넷 대전 아님)' }
 ];
 let _tutFromHelp = false;
 let _tutStep = 0;
@@ -655,18 +662,22 @@ function renderStages() {
     const locked = !st.endless && S.bestScore < st.unlock;
     const el = document.createElement("div");
     el.className = "stage-card" + (locked ? " locked" : "") + (st.endless ? " endless-card" : "");
-    const rewards = Object.entries(st.rewards).map(([k,v]) => `<span class="tag N">${k} +${v}</span>`).join(" ");
+    const rewards = Object.entries(st.rewards).map(([k, v]) => `<span class="tag N res-tag">${RES_NAME[k] || k} +${v}</span>`).join(" ");
+    const weatherTxt = st.weather === "storm" ? "뇌우" : st.weather === "magnetic" ? "자기장" : "맑음";
     el.innerHTML = `
-      <h3>${st.name} ${st.boss ? "<span class='tag' style='background:#3a1622;color:var(--red)'>BOSS</span>" : ""} ${st.endless ? "<span class='tag UR'>∞</span>" : ""}</h3>
-      <small>적 등급 T${st.enemyTier} · ${st.endless ? "∞웨이브" : st.waves+"웨이브"} · ${st.weather?"특수기상":"정상기상"}</small>
-      <div class="reward">${rewards}</div>
-      ${st.endless && S.endlessBest > 0 ? `<small style="color:var(--gold)">🏆 최고기록 웨이브 ${S.endlessBest}</small>` : ""}
-      <div style="margin-top:8px;">
-        <button class="btn ${locked ? "ghost" : st.endless ? "gold" : "primary"}" ${locked ? "disabled" : ""}>
-          ${locked ? `점수 ${st.unlock} 필요` : st.endless ? "무한 출격" : "출격"}
+      <div class="stage-card__head">
+        <h3 class="stage-card__title">${st.name}</h3>
+        <div class="stage-card__badges">${st.boss ? "<span class='tag tag-boss'>BOSS</span>" : ""}${st.endless ? "<span class='tag UR'>∞</span>" : ""}</div>
+      </div>
+      <p class="stage-card__meta">난이도 T${st.enemyTier} · ${st.endless ? "끝없음" : st.waves + "웨이브"} · ${weatherTxt}</p>
+      <div class="stage-card__reward"><span class="reward-label">클리어 보너스</span><div class="reward">${rewards}</div></div>
+      ${st.endless && S.endlessBest > 0 ? `<p class="stage-card__best">최고 웨이브 <b>${S.endlessBest}</b></p>` : ""}
+      <div class="stage-card__actions">
+        <button type="button" class="btn ${locked ? "ghost" : st.endless ? "gold" : "primary"} btn-block stage-go" ${locked ? "disabled" : ""}>
+          ${locked ? `해제: 점수 ${st.unlock}` : st.endless ? "무한 출격" : "출격"}
         </button>
       </div>`;
-    if (!locked) el.querySelector("button").addEventListener("click", e => { e.stopPropagation(); playSfx("ui_click"); startBattle(st); });
+    if (!locked) el.querySelector(".stage-go").addEventListener("click", e => { e.stopPropagation(); playSfx("ui_click"); startBattle(st); });
     host.appendChild(el);
   });
 }
@@ -677,7 +688,7 @@ function renderStages() {
 function renderSquad() {
   const host = $("squadBoard");
   host.innerHTML = "";
-  const labels = ["선봉1","선봉2","후위1","후위2","후위3"];
+  const labels = ["선봉 1", "선봉 2", "후위 1", "후위 2", "후위 3"];
   S.formation.forEach((pid, idx) => {
     const slot = document.createElement("div");
     slot.className = "squad-slot" + (pid ? " filled" : "");
@@ -685,12 +696,14 @@ function renderSquad() {
     if (p) {
       const t = TYPES[p.type];
       slot.innerHTML = `
+        <span class="squad-slot__ix">${idx + 1}</span>
         <div class="role"><span class="tag ${t.key}">${t.name}</span></div>
         <div class="name">${p.name}</div>
-        <div style="font-size:10px;color:var(--muted)">${p.rarity}</div>
+        <div class="squad-slot__rarity tag ${p.rarity}">${p.rarity}</div>
         <div class="lv">LV ${p.level}</div>`;
     } else {
-      slot.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;">${labels[idx]}<br>+ 배치</div>`;
+      slot.innerHTML = `<span class="squad-slot__ix empty">${idx + 1}</span>
+        <div class="squad-slot__empty"><span class="squad-slot__label">${labels[idx]}</span><span class="squad-slot__tap">탭하여 배치</span></div>`;
     }
     slot.addEventListener("click", () => openPilotModal(idx));
     host.appendChild(slot);
@@ -705,17 +718,17 @@ function openPilotModal(slotIdx) {
   $("slotInfo").textContent = `슬롯 ${slotIdx+1}에 배치할 파일럿 선택`;
   host.innerHTML = "";
   const items = [...S.ownedPilots].sort((a,b) => RARITY_ORDER.indexOf(b.rarity)-RARITY_ORDER.indexOf(a.rarity) || b.level-a.level);
-  const empty = document.createElement("div"); empty.className = "p";
-  empty.innerHTML = `<div style="color:var(--muted);font-size:12px;">(비우기)</div>`;
+  const empty = document.createElement("div"); empty.className = "p pilot-pick--empty";
+  empty.innerHTML = `<span class="pilot-pick__empty-text">이 슬롯 비우기</span>`;
   empty.addEventListener("click", () => { S.formation[slotIdx]=null; saveState(); closePilotModal(); renderAll(); });
   host.appendChild(empty);
   for (const p of items) {
     const t = TYPES[p.type]; const used = S.formation.includes(p.id);
     const div = document.createElement("div");
     div.className = "p" + (used ? " active" : "");
-    div.innerHTML = `<div class="row between"><b>${p.name}</b><span class="tag ${p.rarity}">${p.rarity}</span></div>
-      <div style="margin-top:4px;"><span class="tag ${t.key}">${t.name}</span> <small>LV ${p.level}</small></div>
-      <small style="color:var(--muted)">전력 ${pilotPower(p)}</small>`;
+    div.innerHTML = `<div class="row between pilot-pick__row1"><b>${p.name}</b><span class="tag ${p.rarity}">${p.rarity}</span></div>
+      <div class="pilot-pick__row2"><span class="tag ${t.key}">${t.name}</span> <span class="pilot-pick__lv">Lv.${p.level}</span></div>
+      <span class="pilot-pick__pow">전력 ${pilotPower(p)}</span>`;
     div.addEventListener("click", () => {
       const ex = S.formation.indexOf(p.id);
       if (ex >= 0) S.formation[ex] = null;
@@ -743,16 +756,19 @@ function renderHeroes() {
   const sorted = [...S.ownedPilots].sort((a,b) => RARITY_ORDER.indexOf(b.rarity)-RARITY_ORDER.indexOf(a.rarity)||b.level-a.level);
   for (const p of sorted) {
     const t = TYPES[p.type]; const cost = Math.floor(60 * p.level * RARITY_MULT[p.rarity]);
-    const el = document.createElement("div"); el.className = "hero";
+    const maxed = p.level >= 30;
+    const el = document.createElement("div"); el.className = "hero" + (maxed ? " hero--max" : "");
     el.innerHTML = `
       <div class="avatar" style="background:linear-gradient(180deg,${t.color}55 0%,#0e1f39 100%);">${t.name[0]}</div>
       <div class="row between"><div class="name">${p.name}</div><span class="tag ${p.rarity}">${p.rarity}</span></div>
-      <div class="meta"><span class="tag ${t.key}">${t.name}</span> · LV ${p.level}</div>
+      <div class="meta"><span class="tag ${t.key}">${t.name}</span> · Lv.${p.level}${maxed ? " · <span class='hero-max-label'>MAX</span>" : ""}</div>
       <div class="stat-row"><span>공격 <b>${pilotAtk(p).toFixed(1)}</b></span><span>체력 <b>${pilotHp(p)}</b></span></div>
-      <div style="margin-top:8px;"><button class="btn primary" style="width:100%;">레벨업 · 골드 ${cost}</button></div>`;
-    el.querySelector("button").addEventListener("click", () => {
+      <p class="hero-hint">골드로 스탯 상승 · 등급이 높을수록 비용↑</p>
+      <div class="hero-actions"><button type="button" class="btn primary btn-block" ${maxed ? "disabled" : ""}>
+        ${maxed ? "최대 레벨" : `레벨업 · ${cost.toLocaleString()} 골드`}</button></div>`;
+    const btn = el.querySelector("button");
+    if (!maxed) btn.addEventListener("click", () => {
       if (S.gold < cost) return toast("골드가 부족합니다","err");
-      if (p.level >= 30) return toast("최대 레벨","err");
       S.gold -= cost; p.level += 1; saveState(); renderAll(); playSfx("level_up"); toast(`${p.name} LV ${p.level}!`);
     });
     host.appendChild(el);
@@ -764,8 +780,13 @@ function renderHeroes() {
    ============================================================ */
 function renderScoutEmpty() { $("scoutResult").innerHTML = ""; }
 function pushScoutResult(p) {
-  const div = document.createElement("div"); div.className = "result";
-  div.innerHTML = `<div><span class="tag ${p.rarity}">${p.rarity}</span><br>${p.name}<br><small style="color:var(--muted)">${TYPES[p.type].name}</small></div>`;
+  const div = document.createElement("div");
+  div.className = "result result--" + p.rarity;
+  div.innerHTML = `<div class="result__inner">
+    <span class="tag ${p.rarity}">${p.rarity}</span>
+    <div class="result__name">${p.name}</div>
+    <small class="result__type">${TYPES[p.type].name}</small>
+  </div>`;
   $("scoutResult").appendChild(div);
 }
 $("btnScout1").addEventListener("click", () => {
@@ -802,14 +823,22 @@ function renderResearch() {
   const host = $("researchList"); host.innerHTML = "";
   for (const r of RESEARCH) {
     const lv = S.research[r.key]; const cost = researchCost(lv);
-    const el = document.createElement("div"); el.className = "up-card";
+    const el = document.createElement("div");
+    el.className = "up-card up-card--research";
+    el.style.setProperty("--accent", r.color);
     el.innerHTML = `
-      <div class="row between"><div><b>${r.name}</b><br><small style="color:var(--muted)">${r.desc}</small></div><div class="lv">Lv ${lv}</div></div>
-      <div class="progress"><div style="width:${Math.min(100,lv*7)}%"></div></div>
-      <div style="margin-top:8px;"><button class="btn primary" style="width:100%;">연구 · 합금 ${cost.alloy}</button></div>`;
+      <div class="up-card__head row between">
+        <div>
+          <div class="up-card__name">${r.name}</div>
+          <p class="up-card__desc">${r.desc}</p>
+        </div>
+        <div class="up-card__lv">Lv <b>${lv}</b></div>
+      </div>
+      <div class="progress" aria-label="성장"><div style="width:${Math.min(100, lv * 7)}%"></div></div>
+      <button type="button" class="btn primary btn-block up-card__btn">다음 연구 · 합금 ${cost.alloy.toLocaleString()}</button>`;
     el.querySelector("button").addEventListener("click", () => {
       if (!canAfford(cost)) return toast("합금 부족","err");
-      pay(cost); S.research[r.key]+=1; saveState(); renderAll(); playSfx("level_up"); toast(`${r.name} LV ${S.research[r.key]}!`);
+      pay(cost); S.research[r.key]+=1; saveState(); renderAll(); playSfx("level_up"); toast(`${r.name} Lv.${S.research[r.key]}`);
     });
     host.appendChild(el);
   }
@@ -825,15 +854,28 @@ function renderFortress() {
   const host = $("fortressList"); host.innerHTML = "";
   for (const f of FORTRESS) {
     const lv = S.fortress[f.key]; const cost = fortressCost(lv);
-    const el = document.createElement("div"); el.className = "up-card";
+    const atCap = f.key !== "tower" && S.fortress[f.key] >= S.fortress.tower * 3;
+    const el = document.createElement("div");
+    el.className = "up-card up-card--fort";
+    el.style.setProperty("--accent", f.color);
+    const capHint = f.key === "tower" ? "비관제·갑판·연구·공장: 최대 Lv = 관제탑×3" : (atCap ? "관제탑을 먼저 올리면 이 건물도 더 올릴 수 있습니다." : "");
     el.innerHTML = `
-      <div class="row between"><div><b>${f.name}</b><br><small style="color:var(--muted)">${f.desc}</small></div><div class="lv">Lv ${lv}</div></div>
-      <div class="progress"><div style="width:${Math.min(100,lv*6)}%"></div></div>
-      <div style="margin-top:8px;"><button class="btn gold" style="width:100%;">건설 · 골드 ${cost.gold} / 항공유 ${cost.fuel}</button></div>`;
-    el.querySelector("button").addEventListener("click", () => {
+      <div class="up-card__head row between">
+        <div>
+          <div class="up-card__name">${f.name}</div>
+          <p class="up-card__desc">${f.desc}</p>
+        </div>
+        <div class="up-card__lv">Lv <b>${lv}</b></div>
+      </div>
+      <div class="progress" aria-label="성장"><div style="width:${Math.min(100, lv * 6)}%"></div></div>
+      ${capHint ? `<p class="up-card__cap">${capHint}</p>` : ""}
+      <button type="button" class="btn gold btn-block up-card__btn" ${atCap ? "disabled" : ""}>
+        ${atCap ? "상한 도달" : `업그레이드 · ${cost.gold.toLocaleString()} 골드 / ${cost.fuel} 항공유`}</button>`;
+    const btn = el.querySelector("button");
+    if (!atCap) btn.addEventListener("click", () => {
       if (!canAfford(cost)) return toast("자원 부족","err");
-      if (f.key!=="tower" && S.fortress[f.key]>=S.fortress.tower*3) return toast("관제탑 레벨 상한 도달","err");
-      pay(cost); S.fortress[f.key]+=1; saveState(); renderAll(); playSfx("level_up"); toast(`${f.name} Lv ${S.fortress[f.key]}`);
+      if (f.key !== "tower" && S.fortress[f.key] >= S.fortress.tower * 3) return toast("관제탑 레벨 상한 도달","err");
+      pay(cost); S.fortress[f.key] += 1; saveState(); renderAll(); playSfx("level_up"); toast(`${f.name} Lv.${S.fortress[f.key]}`);
       trackQuest("dqFort");
     });
     host.appendChild(el);
@@ -853,11 +895,12 @@ function renderSkins() {
   for (const sk of JET_SKINS) {
     const owned=S.unlockedJetSkins.includes(sk.id); const equipped=S.equippedJetSkin===sk.id;
     const el = document.createElement("div"); el.className="skin"+(equipped?" active":"");
+    const jetBuff = [sk.buff.atk ? `공격 +${sk.buff.atk}%` : "", sk.buff.hp ? `체력 +${sk.buff.hp}%` : ""].filter(Boolean).join(" · ") || "보너스 없음";
     el.innerHTML=`<div class="preview" style="background:linear-gradient(180deg,${typePreviewColor(sk.id)} 0%,#050d1e 100%);">${sk.icon}</div>
-      <div class="row between"><b>${sk.name}</b>${owned?"<span class='tag R'>보유</span>":"<span class='tag N'>잠김</span>"}</div>
-      <small style="color:var(--muted)">${sk.buff.atk?`공격 +${sk.buff.atk}% `:""}${sk.buff.hp?`체력 +${sk.buff.hp}%`:""}</small><br>
-      <button class="btn ${owned?(equipped?"ghost":"primary"):"gold"}" style="width:100%;margin-top:6px;">
-        ${owned?(equipped?"장착됨":"장착"):`다이아 ${sk.price}`}</button>`;
+      <div class="row between skin-row-title"><b>${sk.name}</b>${owned?"<span class='tag R'>보유</span>":"<span class='tag N'>잠김</span>"}</div>
+      <p class="skin-buff">${jetBuff}</p>
+      <button type="button" class="btn ${owned?(equipped?"ghost":"primary"):"gold"} btn-block skin-btn">
+        ${owned?(equipped?"장착 중":"이 스킨 장착"):(sk.price===0?"무료 해제":`구매 · ${sk.price} 다이아`)}</button>`;
     el.querySelector("button").addEventListener("click", () => {
       if (!owned) {
         if (S.gems<sk.price) return toast("다이아 부족","err");
@@ -870,11 +913,12 @@ function renderSkins() {
   for (const sk of FORT_SKINS) {
     const owned=S.unlockedFortSkins.includes(sk.id); const equipped=S.equippedFortSkin===sk.id;
     const el = document.createElement("div"); el.className="skin"+(equipped?" active":"");
+    const fBuff = [sk.buff.goldRate ? `전투·오프라인 자원 +${sk.buff.goldRate}%` : "", sk.buff.atk ? `아군 화력 +${sk.buff.atk}%` : ""].filter(Boolean).join(" · ") || "도색 전용";
     el.innerHTML=`<div class="preview" style="background:linear-gradient(180deg,${typePreviewColor(sk.id)} 0%,#050d1e 100%);">${sk.icon}</div>
-      <div class="row between"><b>${sk.name}</b>${owned?"<span class='tag R'>보유</span>":"<span class='tag N'>잠김</span>"}</div>
-      <small style="color:var(--muted)">${sk.buff.goldRate?`자원 +${sk.buff.goldRate}% `:""}${sk.buff.atk?`공격 +${sk.buff.atk}%`:""}</small><br>
-      <button class="btn ${owned?(equipped?"ghost":"primary"):"gold"}" style="width:100%;margin-top:6px;">
-        ${owned?(equipped?"장착됨":"장착"):`다이아 ${sk.price}`}</button>`;
+      <div class="row between skin-row-title"><b>${sk.name}</b>${owned?"<span class='tag R'>보유</span>":"<span class='tag N'>잠김</span>"}</div>
+      <p class="skin-buff">${fBuff}</p>
+      <button type="button" class="btn ${owned?(equipped?"ghost":"primary"):"gold"} btn-block skin-btn">
+        ${owned?(equipped?"이 외형 적용 중":"이 외형 적용"):(sk.price===0?"기본":`구매 · ${sk.price} 다이아`)}</button>`;
     el.querySelector("button").addEventListener("click", () => {
       if (!owned) {
         if (S.gems<sk.price) return toast("다이아 부족","err");
@@ -890,66 +934,46 @@ function renderSkins() {
    §17  렌더링: 상점 / 시즌패스 탭
    ============================================================ */
 function renderShop() {
-  const host=$("shopList"); host.innerHTML="";
+  const host = $("shopList"); host.innerHTML = "";
   for (const it of SHOP_ITEMS) {
-    const el=document.createElement("div"); el.className="card";
-    el.innerHTML=`<b>${it.name}</b><p style="color:var(--muted);font-size:12px;margin:4px 0 8px;">다이아 ${it.cost}</p><button class="btn primary" style="width:100%;">구매</button>`;
+    const el = document.createElement("div");
+    el.className = "card shop-item";
+    el.innerHTML = `
+      <div class="shop-item__name">${it.name}</div>
+      <p class="shop-item__detail">${it.detail}</p>
+      <p class="shop-item__gets"><span class="label-tiny">획득</span> ${fmtRewardLine(it.give)}</p>
+      <div class="shop-item__row row between">
+        <span class="shop-item__price">다이아 <b>${it.cost}</b></span>
+        <span class="label-tiny muted">1회 구매</span>
+      </div>
+      <button type="button" class="btn primary btn-block">교환</button>`;
     el.querySelector("button").addEventListener("click", () => {
-      if (S.gems<it.cost) return toast("다이아 부족","err");
-      S.gems-=it.cost; give(it.give); saveState(); updateCurrency(); toast("구매 완료"); playSfx("powerup");
+      if (S.gems < it.cost) return toast("다이아 부족", "err");
+      S.gems -= it.cost; give(it.give); saveState(); updateCurrency(); toast("교환 완료"); playSfx("powerup");
     });
     host.appendChild(el);
   }
-  const passHost=$("passList"); passHost.innerHTML="";
+  const passHost = $("passList"); passHost.innerHTML = "";
   for (const p of SEASON_PASS) {
-    const claimed=S.claimedPass.includes(p.tier); const unlocked=S.seasonKills>=p.kills;
-    const el=document.createElement("div"); el.className="card";
-    el.innerHTML=`<b>Tier ${p.tier}</b> <span class="tag N">${p.kills} 격추</span><br>
-      <small style="color:var(--muted);">보상: ${Object.entries(p.rewards).map(([k,v])=>`${k}+${v}`).join(", ")}</small><br>
-      <div class="progress" style="margin-top:6px;"><div style="width:${Math.min(100,(S.seasonKills/p.kills)*100)}%"></div></div>
-      <button class="btn ${claimed?"ghost":(unlocked?"gold":"ghost")}" style="width:100%;margin-top:6px;" ${claimed||!unlocked?"disabled":""}>
-        ${claimed?"획득 완료":(unlocked?"보상 획득":"달성 필요")}</button>`;
+    const claimed = S.claimedPass.includes(p.tier); const unlocked = S.seasonKills >= p.kills;
+    const el = document.createElement("div");
+    el.className = "card pass-card" + (unlocked && !claimed ? " pass-card--ready" : "");
+    el.innerHTML = `
+      <div class="pass-card__head row between">
+        <span class="pass-tier">시즌 ${p.tier}</span>
+        <span class="tag N">${p.kills}기 격추</span>
+      </div>
+      <p class="pass-reward-line">${fmtRewardLine(p.rewards)}</p>
+      <div class="progress pass-progress" aria-label="시즌 진행"><div style="width:${Math.min(100, (S.seasonKills / p.kills) * 100)}%"></div></div>
+      <p class="pass-foot">${S.seasonKills}/${p.kills} 격추</p>
+      <button type="button" class="btn ${claimed ? "ghost" : (unlocked ? "gold" : "ghost")} btn-block" ${claimed || !unlocked ? "disabled" : ""}>
+        ${claimed ? "수령 완료" : (unlocked ? "보상 받기" : "목표 미달")}</button>`;
     el.querySelector("button").addEventListener("click", () => {
-      if (!unlocked||claimed) return;
-      give(p.rewards); S.claimedPass.push(p.tier); saveState(); renderAll(); playSfx("level_up"); toast("시즌 보상 획득!");
+      if (!unlocked || claimed) return;
+      give(p.rewards); S.claimedPass.push(p.tier); saveState(); renderAll(); playSfx("level_up"); toast("시즌 보상 획득");
     });
     passHost.appendChild(el);
   }
-}
-
-/* — 고스트 랭킹(로컬 데모, 온라인 아님) — */
-const _GHOST_RIVAL_NAMES = ['알파 기지', '브라보 함대', '찰리 연대', '델타 요새'];
-function _ghostRivalRows() {
-  const seed = (S.bestScore|0) * 17 + (S.endlessBest|0) * 400 + 1337;
-  return _GHOST_RIVAL_NAMES.map((n, i) => ({
-    name: n,
-    score: Math.max(2000, 3500 + ((seed * (i + 1) * 7 + i * 5000) % 48000))
-  })).sort((a, b) => b.score - a.score);
-}
-
-function renderRanking() {
-  const host = $('rankingBlock');
-  if (!host) return;
-  S.rankHistory = S.rankHistory || [];
-  const ghosts = _ghostRivalRows();
-  const meScore = S.bestScore || 0;
-  const versus = [
-    { name: '나 (이 기지)', score: meScore, me: true },
-    ...ghosts.map((g) => ({ name: g.name + ' · 데모', score: g.score, ghost: true }))
-  ].sort((a, b) => b.score - a.score);
-  const myPlace = 1 + versus.findIndex((r) => r.me);
-  const hist = S.rankHistory.slice(0, 6);
-  host.innerHTML = `
-    <p class="section-hint" style="margin:0 0 8px;">최고 <b>${Math.floor(meScore)}</b>점 · 무한 <b>웨이브 ${S.endlessBest || 0}</b>. 데모 기지는 실시간 대전이 아닌 <b>비교용 표시</b>입니다. 순위: <b>${myPlace}</b> / ${versus.length}</p>
-    <div class="rank-table">${versus.map((r, i) => `
-      <div class="rank-row${r.me ? ' me' : ''}">
-        <span class="rk-num">${i + 1}</span>
-        <span class="rk-name">${r.name}</span>
-        <span class="rk-score">${Math.floor(r.score)}</span>
-      </div>`).join('')}</div>
-    <h3 class="rank-sub">최근 기록 (로컬)</h3>
-    <ul class="rank-history">${hist.length ? hist.map((r) => `<li><span>${r.win ? '승' : '패'}</span> ${Math.floor(r.score)}점 · 웨${r.wave} · S${r.st || '?'}</li>`).join('') : '<li class="muted">기록이 없습니다. 한 판 끝내면 쌓입니다.</li>'}</ul>
-  `;
 }
 
 /* ============================================================
@@ -960,24 +984,25 @@ function renderHospital() {
   host.innerHTML = "";
 
   /* 현황 카드 */
-  const summary = document.createElement("div"); summary.className = "card";
+  const summary = document.createElement("div"); summary.className = "card hospital-card";
   const totalPilots = S.ownedPilots.length;
   const healthy = Math.max(0, totalPilots - S.injuredPilots);
   const healCost = S.injuredPilots * 50;
   summary.innerHTML = `
-    <div class="row between" style="margin-bottom:10px;">
-      <div><h3 style="margin:0;color:var(--sky)">부상 현황</h3><p style="color:var(--muted);font-size:12px;margin:4px 0 0;">전투에서 부상당한 파일럿을 치료해야 다음 출격에 최대 전력으로 참전합니다.</p></div>
+    <div class="hospital-intro">
+      <h3 class="hospital-title">부상 · 치료</h3>
+      <p class="hospital-lead">패배 시 일부가 부상 처리됩니다. 부상이 있으면 <b>출격 시 편대</b>가 줄어듭니다.</p>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
-      <div class="up-card" style="text-align:center;"><div class="lv" style="color:var(--green)">${healthy}</div><small style="color:var(--muted)">정상</small></div>
-      <div class="up-card" style="text-align:center;"><div class="lv" style="color:var(--red)">${S.injuredPilots}</div><small style="color:var(--muted)">부상</small></div>
-      <div class="up-card" style="text-align:center;"><div class="lv">${totalPilots}</div><small style="color:var(--muted)">전체</small></div>
+    <div class="hospital-stat-grid">
+      <div class="hospital-stat hospital-stat--ok"><span class="hospital-stat__n">${healthy}</span><span class="hospital-stat__l">작전 가능</span></div>
+      <div class="hospital-stat hospital-stat--bad"><span class="hospital-stat__n">${S.injuredPilots}</span><span class="hospital-stat__l">치료 필요</span></div>
+      <div class="hospital-stat"><span class="hospital-stat__n">${totalPilots}</span><span class="hospital-stat__l">전원</span></div>
     </div>`;
 
   if (S.injuredPilots > 0) {
     const healBtn = document.createElement("button");
-    healBtn.className = "btn gold"; healBtn.style.width="100%";
-    healBtn.textContent = `전원 치료 · 합금 ${healCost}`;
+    healBtn.className = "btn gold btn-block";
+    healBtn.textContent = `전원 치료 · 합금 ${healCost.toLocaleString()}`;
     healBtn.addEventListener("click", () => {
       if (S.alloy < healCost) return toast("합금 부족","err");
       S.alloy -= healCost; S.injuredPilots = 0;
@@ -987,8 +1012,8 @@ function renderHospital() {
 
     /* 1명씩 치료 */
     const healOneBtn = document.createElement("button");
-    healOneBtn.className = "btn primary"; healOneBtn.style.cssText="width:100%;margin-top:8px;";
-    healOneBtn.textContent = `1명 치료 · 합금 50`;
+    healOneBtn.className = "btn primary btn-block hospital-btn-secondary";
+    healOneBtn.textContent = `1명만 치료 · 합금 50`;
     healOneBtn.addEventListener("click", () => {
       if (S.alloy < 50) return toast("합금 부족","err");
       S.alloy -= 50; S.injuredPilots = Math.max(0, S.injuredPilots-1);
@@ -997,20 +1022,19 @@ function renderHospital() {
     summary.appendChild(healOneBtn);
   } else {
     const ok = document.createElement("p");
-    ok.style.cssText = "text-align:center;color:var(--green);font-weight:700;margin:12px 0 0;";
-    ok.textContent = "✅ 전원 정상 — 즉시 출격 가능";
+    ok.className = "hospital-all-ok";
+    ok.textContent = "전원 작전 가능 — 부상자 없음";
     summary.appendChild(ok);
   }
   host.appendChild(summary);
 
   /* 출격 페널티 안내 */
-  const note = document.createElement("div"); note.className = "card"; note.style.marginTop="10px";
-  note.innerHTML = `<h3 style="margin:0 0 6px;font-size:14px;">부상 시스템 안내</h3>
-    <ul style="color:var(--muted);font-size:12px;margin:0;padding-left:16px;line-height:1.7;">
-      <li>전투 패배 시 파괴된 편대 수의 일부가 부상으로 처리됩니다.</li>
-      <li>부상 파일럿이 있으면 출격 초기 편대 수가 감소합니다.</li>
-      <li>합금 50개로 파일럿 1명을 즉시 치료할 수 있습니다.</li>
-      <li>부상 최대 인원: 5명</li>
+  const note = document.createElement("div"); note.className = "card hospital-help";
+  note.innerHTML = `<h4 class="hospital-help__t">요약</h4>
+    <ul class="hospital-help__ul">
+      <li>미션 실패 시 격추·손실에 비례해 부상이 쌓입니다 (최대 5명).</li>
+      <li>1명당 합금 50 · 전원 치료는 <b>부상 인원×50</b> 합금.</li>
+      <li>치료 전에는 출격 시 초기 <b>편대</b>가 줄어듭니다 (편성 화면에서 확인).</li>
     </ul>`;
   host.appendChild(note);
 }
@@ -1028,8 +1052,13 @@ function renderQuests() {
   const today = new Date();
   const dateStr = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,"0")}.${String(today.getDate()).padStart(2,"0")}`;
   const pending = DAILY_QUEST_DEF.filter(q => !S.dailyCompleted.includes(q.id) && S.dailyProgress[q.id]>=q.goal).length;
-  header.innerHTML = `<div class="row between"><b>📋 일일 퀘스트</b><span class="tag N">${dateStr}</span></div>
-    <p style="color:var(--muted);font-size:12px;margin:4px 0 0;">매일 자정 초기화됩니다. ${pending>0?`<span style="color:var(--gold)">✅ 수령 가능 ${pending}개!</span>`:""}`;
+  header.innerHTML = `<div class="quest-header">
+    <div class="row between quest-header__line">
+      <b class="quest-header__t">오늘의 목표</b>
+      <span class="tag N quest-date">${dateStr}</span>
+    </div>
+    <p class="quest-header__sub">날짜가 바뀌면 초기화됩니다. ${pending > 0 ? `<span class="quest-pending">수령 가능 ${pending}건</span>` : ""}</p>
+  </div>`;
   host.appendChild(header);
 
   for (const q of DAILY_QUEST_DEF) {
@@ -1037,24 +1066,24 @@ function renderQuests() {
     const completed = S.dailyCompleted.includes(q.id);
     const unlocked  = progress >= q.goal;
     const pct       = Math.min(100, (progress/q.goal)*100);
-    const el = document.createElement("div"); el.className="quest-card" + (completed?" done":"");
+    const el = document.createElement("div"); el.className="quest-card" + (completed?" quest-card--done":"") + (unlocked && !completed ? " quest-card--ready" : "");
     el.innerHTML = `
-      <div class="row between">
-        <div class="row" style="gap:8px;">
-          <span style="font-size:20px;">${q.icon}</span>
+      <div class="quest-card__top row between">
+        <div class="row quest-card__info">
+          <span class="quest-ico" aria-hidden="true">${q.icon}</span>
           <div>
-            <b style="font-size:13px;">${q.desc}</b><br>
-            <small style="color:var(--muted)">보상: ${Object.entries(q.reward).map(([k,v])=>`${k} +${v}`).join(", ")}</small>
+            <div class="quest-title">${q.desc}</div>
+            <div class="quest-reward">보상: ${fmtRewardLine(q.reward)}</div>
           </div>
         </div>
-        <span style="color:var(--muted);font-size:12px;white-space:nowrap;">${Math.min(progress,q.goal)} / ${q.goal}</span>
+        <span class="quest-count">${Math.min(progress,q.goal)} / ${q.goal}</span>
       </div>
-      <div class="progress" style="margin-top:8px;"><div style="width:${pct}%"></div></div>
-      <button class="btn ${completed?"ghost":(unlocked?"gold":"ghost")}" style="width:100%;margin-top:8px;" ${completed||!unlocked?"disabled":""}>
-        ${completed?"✅ 완료":(unlocked?"🎁 보상 수령":"진행 중")}</button>`;
+      <div class="progress quest-progress"><div style="width:${pct}%"></div></div>
+      <button type="button" class="btn ${completed?"ghost":(unlocked?"gold":"ghost")} btn-block quest-btn" ${completed||!unlocked?"disabled":""}>
+        ${completed?"완료":(unlocked?"보상 받기":"진행 중")}</button>`;
     el.querySelector("button").addEventListener("click", () => {
       if (!unlocked||completed) return;
-      give(q.reward); S.dailyCompleted.push(q.id); saveState(); renderAll(); playSfx("level_up"); toast(`퀘스트 완료! ${Object.entries(q.reward).map(([k,v])=>`${k}+${v}`).join(" ")}`);
+      give(q.reward); S.dailyCompleted.push(q.id); saveState(); renderAll(); playSfx("level_up"); toast(`퀘스트 완료 · ${fmtRewardLine(q.reward)}`);
     });
     host.appendChild(el);
   }
@@ -1067,7 +1096,7 @@ function renderAll() {
   updateCurrency();
   renderStages(); renderSquad(); renderHeroes();
   renderResearch(); renderFortress(); renderSkins(); renderShop();
-  renderHospital(); renderQuests(); renderRanking();
+  renderHospital(); renderQuests();
   /* 병원 탭 배지 */
   const hospitalTab = document.querySelector(".tab[data-tab='hospital']");
   if (hospitalTab) hospitalTab.querySelector(".tb-ico").textContent = S.injuredPilots>0 ? `🏥${S.injuredPilots}` : "🏥";
@@ -1213,8 +1242,6 @@ function startBattle(stage) {
 
   initBgObjects();
   refreshBattleHud();
-  _lastSimTime = 0;
-  _simAcc = 0;
 
   if (injuryPenalty > 0) toast(`부상자 ${injuryPenalty}명 — 초기 편대 감소`, "warn");
 }
@@ -1501,13 +1528,12 @@ function cacheAllyPositions() {
   B._allies = getAllyPositions(MAX_LOGIC_ALLIES);
 }
 function enemyShoot(e) {
-  /* 적 탄속 = (적 이동속도 + 기본 이동 상수) × bMul + 티어 보너스
-     → 탄환이 적 이동속도의 2~3.5배로 자연스럽게 빠름 */
+  /* 적 탄속 = (적 낙하속 e.speed+1.2) × bMul + 티어·날씨 — playerShoot의 v와 같은 «프레임당 px» 기준 */
   const tierBonus = B.stage.enemyTier * 0.3;
   const stormAdd  = B.weather==="storm" ? 0.5 : 0;
-  const eSpeed    = (e.speed||2.8) + 1.2;          /* 실제 이동속도 */
+  const eMovePerTick = (e.speed || 2.8) + 1.2;
   const bMul      = e.bMul || 2.6;
-  const bspeed    = eSpeed * bMul + tierBonus + stormAdd;
+  const bspeed    = eMovePerTick * bMul + tierBonus + stormAdd;
 
   if (e.kind==="bomber") {
     for (const dx of [-0.6,0,0.6])
@@ -2080,13 +2106,13 @@ function endBattle(win) {
   $("overWave").textContent=B.wave;
 
   if (win) {
-    $("overTitle").textContent="MISSION COMPLETE"; $("overTitle").style.color="var(--gold)";
+    $("overTitle").textContent="미션 클리어"; $("overTitle").style.color="var(--gold)";
     $("overSub").textContent=B.stage.id===99 ? `∞ 웨이브 ${B.wave} 도달!` : `${B.stage.name} 클리어!`;
     playSfx("clear");
     trackQuest("dqClear");
     if (B.stage.endless) toast(`무한 모드 웨이브 ${B.wave} — 최고기록 ${S.endlessBest}!`);
   } else {
-    $("overTitle").textContent="MISSION FAILED"; $("overTitle").style.color="var(--red)";
+    $("overTitle").textContent="미션 실패"; $("overTitle").style.color="var(--red)";
     $("overSub").textContent="모든 아군이 격추되었습니다.";
     playSfx("gameover"); triggerShake(14, 25);
     /* 부상자 발생 */
@@ -2113,10 +2139,10 @@ function endBattle(win) {
   give(rew);
   if (win&&S.stageCleared<B.stage.id) S.stageCleared=B.stage.id;
   if (B.score>S.bestScore) S.bestScore=Math.floor(B.score);
-  S.rankHistory = S.rankHistory || [];
-  S.rankHistory.unshift({ score: Math.floor(B.score), wave: B.wave, st: B.stage && B.stage.id, win, t: Date.now() });
-  S.rankHistory = S.rankHistory.slice(0, 20);
-  $("overRewards").innerHTML=Object.entries(rew).filter(([,v])=>v>0).map(([k,v])=>`${k} +${v}`).join(" · ")||"-";
+  {
+    const r2 = Object.fromEntries(Object.entries(rew).filter(([, v]) => v > 0));
+    $("overRewards").innerHTML = Object.keys(r2).length ? fmtRewardLine(r2) : "—";
+  }
   /* 광고 3배 버튼 표시 제어 */
   const adBtn = $('btnAdReward');
   if (adBtn) {
@@ -3352,33 +3378,17 @@ function draw() {
 }
 
 /* ============================================================
-   §31  게임 루프 — 고정 시뮬 60Hz (모니터 주사율과 무관하게 속도 일정)
+   §31  게임 루프 — 1rAF ≈ 1 update(물리 1틱), ~60Hz로 설계된 수치 유지
+   (고정 시뮬 다중 스텝은 아·적·탄 상대속도를 어긋나게 하므로 쓰지 않음)
    ============================================================ */
-let _lastSimTime = 0;
-let _simAcc = 0;
-const SIM_STEP_MS = 1000 / 60;
-const SIM_MAX_STEPS = 4;
+let _lastFrameTime = 0;
 function loop(ts) {
   if (document.hidden) { requestAnimationFrame(loop); return; }
-  if (!_lastSimTime) _lastSimTime = ts;
-  const dt = Math.min(48, Math.max(0, ts - _lastSimTime));
-  _lastSimTime = ts;
+  if (ts - _lastFrameTime < 14) { requestAnimationFrame(loop); return; }
+  _lastFrameTime = ts;
 
+  update();
   const onBattle = $("battlePage") && !$("battlePage").classList.contains("hidden");
-  const canSim = onBattle && B.running && !B.paused && !B.bossPending && !_skillPickerOpen;
-  if (canSim) {
-    _simAcc += dt;
-    let steps = 0;
-    while (_simAcc >= SIM_STEP_MS && steps < SIM_MAX_STEPS) {
-      update();
-      _simAcc -= SIM_STEP_MS;
-      steps++;
-    }
-  } else {
-    if (!onBattle || !B.running) _simAcc = 0;
-    else if (B.paused || B.bossPending || _skillPickerOpen) _simAcc = 0;
-    update();
-  }
   if (onBattle) { updateGameMeshes(); updateThreeBackground(); draw(); }
   requestAnimationFrame(loop);
 }
