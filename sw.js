@@ -1,10 +1,10 @@
 /* 라스트 워 : 에어 컴뱃 — Service Worker (오프라인 캐시) */
-const CACHE = "lastwar-v4";
+const CACHE = "lastwar-v5";
 const ASSETS = [
   "./",
   "./index.html",
-  "./style.css",
-  "./game.js",
+  "./style.css?v=5",
+  "./game.js?v=5",
   "./manifest.json",
   "./icon.svg",
   "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"
