@@ -5,22 +5,27 @@
 
 /* ---------- CSS 변수 ---------- */
 :root {
-  --bg-0: #05080f;
-  --bg-1: #0a1322;
-  --bg-2: #111f36;
-  --panel: #0f1b30;
-  --panel-2: #152743;
-  --line: #24476f;
-  --line-soft: #1c3657;
-  --text: #e5efff;
-  --muted: #8aa7cc;
-  --gold: #ffc857;
-  --gold-2: #ff9a2e;
-  --sky: #4eb4ff;
-  --sky-2: #2f74f0;
-  --red: #ff5a6e;
-  --green: #49e3a1;
-  --purple: #a67bff;
+  --bg-0: #030611;
+  --bg-1: #081018;
+  --bg-2: #0f1f38;
+  --panel: #0c182b;
+  --panel-2: #13223e;
+  --line: #2a5a8f;
+  --line-soft: #1e3d5c;
+  --text: #e8f2ff;
+  --muted: #7a9cc8;
+  --gold: #ffd060;
+  --gold-2: #ff9520;
+  --sky: #5ec8ff;
+  --sky-2: #3d8fff;
+  --red: #ff6b80;
+  --green: #4af0b8;
+  --purple: #c49cff;
+  --neon-cyan: #00f5ff;
+  --neon-mag: #ff2d9b;
+  --glow-cyan: rgba(0, 245, 255, 0.35);
+  --glow-gold: rgba(255, 200, 90, 0.4);
+  --vignette: rgba(2, 4, 12, 0.92);
 }
 
 /* ---------- 기본 리셋 ---------- */
@@ -54,9 +59,10 @@ body {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(78, 180, 255, 0.15), transparent 60%),
-    radial-gradient(800px 500px at 80% 120%, rgba(255, 200, 87, 0.08), transparent 60%),
-    var(--bg-0);
+    radial-gradient(1400px 700px at 50% -15%, rgba(0, 245, 255, 0.14), transparent 55%),
+    radial-gradient(900px 520px at 12% 95%, rgba(255, 45, 155, 0.08), transparent 50%),
+    radial-gradient(1000px 500px at 92% 40%, rgba(255, 190, 70, 0.09), transparent 52%),
+    linear-gradient(165deg, #040812 0%, #060d18 40%, #03060e 100%);
 }
 
 /* ---------- 앱 컨테이너 ---------- */
@@ -69,9 +75,15 @@ body {
   height: 100vh; /* fallback first, then overridden by dvh where supported */
   display: grid;
   grid-template-rows: 44px 1fr 48px;
-  background: var(--bg-1);
-  border-left: 1px solid var(--line-soft);
-  border-right: 1px solid var(--line-soft);
+  background:
+    linear-gradient(180deg, rgba(0, 245, 255, 0.04) 0%, transparent 40%),
+    linear-gradient(180deg, var(--bg-1) 0%, #050c18 100%);
+  border-left: 1px solid rgba(0, 245, 255, 0.22);
+  border-right: 1px solid rgba(255, 45, 155, 0.12);
+  box-shadow:
+    0 0 60px rgba(0, 0, 0, 0.75),
+    inset 0 0 80px rgba(0, 180, 255, 0.04),
+    0 0 1px rgba(255, 215, 120, 0.15);
   position: relative;
   overflow: hidden;
 }
@@ -102,9 +114,22 @@ body {
   align-items: center;
   padding: 0 8px 0 10px;
   gap: 6px;
-  background: linear-gradient(180deg, #0c1a30 0%, #0a1527 100%);
-  border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, #0d2038 0%, #081424 100%);
+  border-bottom: 1px solid rgba(0, 245, 255, 0.28);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 200, 90, 0.1);
   z-index: 20; /* 전투 캔버스·모달보다 위 — 재화 칩이 항상 보이게 */
+}
+
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .logo {
@@ -112,12 +137,13 @@ body {
   letter-spacing: 0.5px;
   color: var(--gold);
   font-size: 13px;
-  text-shadow: none;
+  text-shadow: 0 0 16px var(--glow-gold), 0 0 28px rgba(255, 140, 40, 0.25);
 }
 
 .logo span {
-  color: var(--sky);
+  color: var(--neon-cyan);
   font-weight: 700;
+  text-shadow: 0 0 12px var(--glow-cyan);
 }
 
 .chips {
@@ -132,13 +158,14 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(14, 28, 50, 0.75);
-  border: 1px solid var(--line);
+  background: rgba(8, 22, 42, 0.88);
+  border: 1px solid rgba(94, 200, 255, 0.35);
   padding: 3px 6px;
   border-radius: 8px;
   font-size: 11px;
   min-width: 0;
   justify-content: center;
+  box-shadow: 0 0 12px rgba(0, 180, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .chip b { color: #fff; font-weight: 700; }
@@ -181,8 +208,9 @@ body {
   grid-row: 3;
   display: grid;
   grid-template-columns: repeat(10, 1fr); /* 탭 10개: 출격·편대·영웅·스카우트·연구·요새·스킨·병원·퀘스트·상점 */
-  background: linear-gradient(180deg, #0b192e 0%, #081220 100%);
-  border-top: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, #0a182c 0%, #050d18 100%);
+  border-top: 1px solid rgba(0, 245, 255, 0.22);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.5);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -238,8 +266,10 @@ body {
    ============================================================ */
 #titlePage {
   background:
-    radial-gradient(800px 400px at 50% 30%, rgba(78, 180, 255, 0.25), transparent 60%),
-    linear-gradient(180deg, #091124 0%, #050912 100%);
+    radial-gradient(900px 480px at 50% 20%, rgba(0, 245, 255, 0.18), transparent 58%),
+    radial-gradient(600px 380px at 80% 75%, rgba(255, 45, 155, 0.12), transparent 55%),
+    radial-gradient(700px 400px at 15% 60%, rgba(255, 200, 90, 0.1), transparent 50%),
+    linear-gradient(180deg, #0a1528 0%, #040810 100%);
   align-items: center;
   justify-content: center;
   padding: 20px;
@@ -258,9 +288,10 @@ body {
   font-weight: 800;
   letter-spacing: 0.35em;
   text-transform: uppercase;
-  color: var(--sky);
-  opacity: 0.95;
+  color: var(--neon-cyan);
+  opacity: 0.98;
   margin: 0;
+  text-shadow: 0 0 20px var(--glow-cyan);
 }
 .title-en {
   margin: -4px 0 0;
@@ -275,11 +306,11 @@ body {
   font-weight: 900;
   letter-spacing: 2px;
   margin: 0;
-  background: linear-gradient(180deg, #fff4cc 0%, var(--gold) 50%, #c97d12 100%);
+  background: linear-gradient(180deg, #fff8e0 0%, var(--gold) 38%, #d97810 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 0 0 28px rgba(255, 180, 40, 0.25);
+  filter: drop-shadow(0 0 22px rgba(255, 200, 80, 0.55)) drop-shadow(0 0 42px rgba(0, 245, 255, 0.22));
 }
 
 .title-sub {
@@ -293,12 +324,15 @@ body {
   height: 220px;
   width: min(540px, 90%);
   border-radius: 18px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(0, 245, 255, 0.35);
   background:
-    radial-gradient(circle at 50% 50%, rgba(255, 200, 87, 0.15), transparent 60%),
-    linear-gradient(180deg, #0b1b33 0%, #05101f 100%);
+    radial-gradient(circle at 50% 45%, rgba(255, 200, 87, 0.22), transparent 62%),
+    linear-gradient(180deg, #0c2038 0%, #050c18 100%);
   position: relative;
   overflow: hidden;
+  box-shadow:
+    0 0 32px rgba(0, 200, 255, 0.12),
+    inset 0 0 40px rgba(0, 0, 0, 0.35);
 }
 
 .title-art::after {
@@ -713,7 +747,7 @@ body {
    전투 (Battle) 화면
    ============================================================ */
 #battlePage {
-  background: #000;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0, 80, 120, 0.25), transparent 55%), #000;
   align-items: stretch;
   justify-content: stretch;
   z-index: 5;
@@ -741,16 +775,16 @@ body {
   gap: 4px 8px;
   max-width: min(340px, 92vw);
   padding: 4px 8px;
-  background: rgba(4, 10, 22, 0.88);
-  border: 1px solid rgba(78, 180, 255, 0.4);
+  background: rgba(4, 12, 28, 0.9);
+  border: 1px solid rgba(0, 245, 255, 0.38);
   border-radius: 10px;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   z-index: 2;
   pointer-events: none;
   font-size: 10px;
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.1), 0 2px 10px rgba(0,0,0,0.45);
 }
 .battle-currency-bar .bc-item {
   display: inline-flex;
@@ -795,19 +829,19 @@ body {
 }
 
 .hud-card {
-  background: rgba(4, 10, 22, 0.90);
-  border: 1px solid rgba(78, 180, 255, 0.45);
-  border-radius: 7px;
-  padding: 4px 7px;
+  background: rgba(4, 14, 28, 0.92);
+  border: 1px solid rgba(0, 245, 255, 0.4);
+  border-radius: 8px;
+  padding: 4px 8px;
   color: #ffffff;
   font-weight: 600;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   pointer-events: auto;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.45);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.95);
+  box-shadow: 0 0 16px rgba(0, 200, 255, 0.12), 0 2px 8px rgba(0,0,0,0.5);
 }
 
-.hud-card b { color: #ffe066; }
+.hud-card b { color: #ffe875; text-shadow: 0 0 10px rgba(255, 220, 90, 0.35); }
 
 #battleButtons {
   position: absolute;
@@ -849,7 +883,11 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(2, 6, 14, 0.75);
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(0, 245, 255, 0.08), transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(255, 45, 155, 0.06), transparent 50%),
+    rgba(2, 4, 12, 0.82);
+  backdrop-filter: blur(4px);
   z-index: 3;
 }
 
@@ -861,15 +899,18 @@ body {
 .result-card {
   width: min(420px, 92%);
   padding: 24px;
-  border: 2px solid rgba(78, 180, 255, 0.55);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #1a2e50 0%, #0a1630 100%);
+  border: 1px solid rgba(0, 245, 255, 0.45);
+  border-radius: 18px;
+  background: linear-gradient(165deg, #152a4a 0%, #081425 50%, #060e1c 100%);
   text-align: center;
-  box-shadow: 0 4px 30px rgba(0,0,0,0.70);
+  box-shadow:
+    0 0 0 1px rgba(255, 200, 90, 0.12),
+    0 8px 40px rgba(0, 0, 0, 0.85),
+    0 0 48px rgba(0, 200, 255, 0.15);
 }
 
-.result-card h2 { margin: 0; font-size: 26px; text-shadow: 0 1px 8px rgba(0,0,0,0.8); }
-.result-card p  { color: #b8d8f8; font-size: 14px; }
+.result-card h2 { margin: 0; font-size: 26px; text-shadow: 0 0 24px rgba(255, 200, 90, 0.35), 0 2px 12px rgba(0,0,0,0.9); }
+.result-card p  { color: #aac8e8; font-size: 14px; }
 
 /* ============================================================
    파일럿 선택 모달
@@ -925,11 +966,11 @@ body {
   bottom: calc(88px + env(safe-area-inset-bottom, 0));
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(12, 24, 48, 0.92);
-  border: 1px solid var(--gold);
-  color: #ffe7a8;
-  padding: 8px 16px;
-  border-radius: 20px;
+  background: rgba(8, 18, 38, 0.94);
+  border: 1px solid rgba(255, 200, 90, 0.55);
+  color: #fff0c8;
+  padding: 9px 18px;
+  border-radius: 22px;
   font-size: 13px;
   z-index: 30;
   opacity: 0;
@@ -937,9 +978,10 @@ body {
   pointer-events: none;
   max-width: min(420px, 92vw);
   white-space: normal;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55), 0 0 28px rgba(255, 190, 70, 0.2);
+  backdrop-filter: blur(8px);
   text-align: center;
   line-height: 1.35;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.45);
 }
 
 .toast.show {

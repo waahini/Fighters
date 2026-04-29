@@ -1567,13 +1567,22 @@ window.addEventListener("keydown", e => {
   ensureAudio();
   B.keys[e.key]=true; B.keys[e.code]=true;
   if (e.code==="Space") e.preventDefault();
-  if ((e.key==="p"||e.key==="P") && B.running) B.paused=!B.paused;
+  if ((e.key==="p"||e.key==="P") && B.running) {
+    if (B.luckyRoulette) requestLuckyRouletteBrake();
+    else B.paused=!B.paused;
+  }
   if ((e.key==="m"||e.key==="M") && !$("battlePage").classList.contains("hidden")) returnToLobby();
 });
 window.addEventListener("keyup", e => { B.keys[e.key]=false; B.keys[e.code]=false; });
 
 let dragging=false;
-canvas.addEventListener("pointerdown", e => { e.preventDefault(); ensureAudio(); dragging=true; movePlayerTo(e); }, { passive:false });
+canvas.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  ensureAudio();
+  if (B.luckyRoulette) { requestLuckyRouletteBrake(); return; }
+  dragging=true;
+  movePlayerTo(e);
+}, { passive:false });
 canvas.addEventListener("pointermove", e => { e.preventDefault(); if(dragging) movePlayerTo(e); }, { passive:false });
 canvas.addEventListener("pointerup",   e => { e.preventDefault(); dragging=false; }, { passive:false });
 canvas.addEventListener("pointercancel", () => { dragging = false; });
@@ -1587,10 +1596,25 @@ function movePlayerTo(e) {
   B.player.x = clamp((e.clientX - r.left) * scaleX, 20, W-20);
 }
 
-$("btnBPause").addEventListener("click",    () => { if(B.running) B.paused=!B.paused; });
+$("btnBPause").addEventListener("click",    () => {
+  if (B.luckyRoulette) requestLuckyRouletteBrake();
+  else if (B.running) B.paused = !B.paused;
+});
 $("btnBHome").addEventListener("click",     () => returnToLobby());
 $("btnOverHome").addEventListener("click",  () => returnToLobby());
 $("btnOverRetry").addEventListener("click", () => startBattle(B.stage));
+const _btnOverNext = $("btnOverNext");
+if (_btnOverNext) {
+  _btnOverNext.addEventListener("click", () => {
+    const st = _btnOverNext._nextStageRef;
+    if (!st) return;
+    if (!st.endless && S.bestScore < st.unlock) {
+      toast(`해제: 누적 최고 점수 ${st.unlock.toLocaleString("ko-KR")} 이상`, "warn");
+      return;
+    }
+    startBattle(st);
+  });
+}
 $("btnBossStart").addEventListener("click", () => { $("bossPanel").classList.remove("show"); B.bossPending=false; });
 /* 광고 3배 보상 버튼 */
 const _adBtn = $("btnAdReward");
@@ -2028,7 +2052,16 @@ function trySpawnLuckyTransport() {
   B.luckySpawnAcc = 0;
   if (Math.random() > 0.36) return;
   const tier = B.stage?.enemyTier || 1;
-  const hp = 920 + tier * 480 + (B.wave | 0) * 110;
+  const wave = Math.max(1, B.wave | 0);
+  const wCap = Math.min(wave, 48);
+  /* 웨이브·티어가 오를수록 체력 급증 (후반 구간은 선형으로 추가) */
+  const hp = Math.floor(
+    4000
+    + tier * 1550
+    + wave * (420 + tier * 42)
+    + wCap * wCap * 76
+    + Math.max(0, wave - 48) * 950
+  );
   B.luckyTransports.push({
     x: -90,
     y: rand(H * 0.18, H * 0.56),
@@ -2039,11 +2072,52 @@ function trySpawnLuckyTransport() {
   toast("✨ 황금 수송기가 코스를 가로지릅니다!", "ok");
   playSfx("level_up");
 }
+function luckyRouletteIdxFromSpin(spin) {
+  const n = 3, twoPi = Math.PI * 2;
+  const pointerAng = 0;
+  for (let k = -2; k <= 3; k++) {
+    for (let i = 0; i < n; i++) {
+      const a0 = spin + (i / n) * twoPi - Math.PI / 2 + k * twoPi;
+      const a1 = a0 + twoPi / n;
+      if (pointerAng >= a0 && pointerAng < a1) return i;
+    }
+  }
+  return 0;
+}
+function finishLuckyRoulette(idx) {
+  B.luckyRoulette = null;
+  B.paused = false;
+  if (idx === 0) {
+    addSquadWithOverflowFever(50);
+    toast("🎰 LUCKY! 아군 +50기 즉시!", "ok");
+  } else if (idx === 1) {
+    B.invincibleTimer = 600;
+    toast("🎰 LUCKY! 10초 무적!", "ok");
+  } else {
+    give({ gold: 1000 });
+    updateCurrency();
+    saveState();
+    toast("🎰 LUCKY! 골드 +1000", "ok");
+  }
+  playSfx("clear");
+  triggerShake(12, 22);
+}
 function startLuckyRoulette() {
-  B.luckyRoulette = { t: 60, spin: 0, idx: Math.floor(Math.random() * 3) };
+  B.luckyRoulette = {
+    spin: Math.random() * Math.PI * 2,
+    omega: 0.195 + Math.random() * 0.06,
+    age: 0,
+    brake: false
+  };
   B.paused = true;
   playSfx("powerup");
   triggerShake(16, 32);
+}
+function requestLuckyRouletteBrake() {
+  const R = B.luckyRoulette;
+  if (!R) return;
+  R.brake = true;
+  R.omega = Math.min(R.omega, 0.055);
 }
 function loseAlly(x, y) {
   if (B.squad<=0) return;
@@ -2079,7 +2153,11 @@ function applyGate(g) {
     if (gain > 0) addSquadWithOverflowFever(gain);
   }
   else if (g.op==="-") {
-    if (_gateLatePenaltyActive()) {
+    if (g.value <= 0) {
+      const bonus = 12 + Math.floor(Math.random() * 16) + (B.stage?.enemyTier || 1) * 2;
+      addSquadWithOverflowFever(bonus);
+      toast(`⚡ 마이너스 해체! +${bonus}기`, "ok");
+    } else if (_gateLatePenaltyActive()) {
       B.squad = Math.max(1, Math.floor(B.squad * 0.5));
     } else {
       B.squad = Math.max(1, B.squad - Math.floor(g.value));
@@ -2121,28 +2199,17 @@ function useBomb() {
 function update() {
   if (!B.running || B.bossPending) return;
 
-  /* 럭키 룰렛(일시정지 중에도 타이머만 진행) */
+  /* 럭키 룰렛: 계속 회전 → P/탭으로 감속, 시간 경과 시 자동 감속 후 정지 */
   if (B.luckyRoulette) {
-    B.luckyRoulette.t--;
-    B.luckyRoulette.spin += 0.5;
-    if (B.luckyRoulette.t <= 0) {
-      const idx = B.luckyRoulette.idx;
-      B.luckyRoulette = null;
-      B.paused = false;
-      if (idx === 0) {
-        addSquadWithOverflowFever(50);
-        toast("🎰 LUCKY! 아군 +50기 즉시!", "ok");
-      } else if (idx === 1) {
-        B.invincibleTimer = 600;
-        toast("🎰 LUCKY! 10초 무적!", "ok");
-      } else {
-        give({ gold: 1000 });
-        updateCurrency();
-        saveState();
-        toast("🎰 LUCKY! 골드 +1000", "ok");
-      }
-      playSfx("clear");
-      triggerShake(12, 22);
+    const R = B.luckyRoulette;
+    R.age++;
+    R.spin += R.omega;
+    if (R.age > 220) R.brake = true;
+    if (R.brake) R.omega *= 0.93;
+    else R.omega *= 0.9985;
+    if (R.omega < 0.011) {
+      const idx = luckyRouletteIdxFromSpin(R.spin);
+      finishLuckyRoulette(idx);
     }
     return;
   }
@@ -2459,7 +2526,12 @@ function update() {
       else if (g.op==="-") {
         const tk = B.stage?.enemyTier || 1;
         g.value = Math.max(0, g.value - (4 + tk * 0.45));
-      }  /* 값이 커질수록·티어가 높을수록 탄으로 더 많이 깎임 */
+        if (g.value <= 0) {
+          g.op = "+";
+          g.value = 14 + Math.floor(Math.random() * 22) + tk * 3;
+          g.growth = 1;
+        }
+      }  /* 0 이하면 플러스 판으로 전환 */
       /* ÷는 고정 배율 — 탄으로 수치 변경 없음 */
       clearMesh(b);
       B.bullets.splice(j,1); B.score+=1;
@@ -2470,6 +2542,8 @@ function update() {
 
   /* 적 처리 */
   const fireLineY = _enemyFireLineY();
+  /* 전열선에 닿기 전에도 약간 아래쪽까지 들어오면 사격 시작 */
+  const enemyEarlyFireY = fireLineY - 52;
   for (let i=B.enemies.length-1;i>=0;i--) {
     const e=B.enemies[i];
 
@@ -2614,7 +2688,7 @@ function update() {
       e.aimAngle = Math.max(-0.72, Math.min(0.72, e.aimAngle));
     }
     e.fireCd--;
-    if (e.fireCd <= 0 && e.inHold) {
+    if (e.fireCd <= 0 && (e.inHold || e.y >= enemyEarlyFireY)) {
       enemyShoot(e);
       e.fireCd = e.fireBase + Math.random() * 30;
     }
@@ -2864,6 +2938,24 @@ function endBattle(win) {
     } else {
       adBtn.textContent = '📺 광고 시청 → 보상 3배!';
       adBtn.disabled = false;
+    }
+  }
+  const btnNext = $("btnOverNext");
+  if (btnNext) {
+    if (win && B.stage && !B.stage.endless) {
+      const higher = STAGES.filter(s => !s.endless && s.id > B.stage.id).sort((a, b) => a.id - b.id);
+      const nextSt = higher[0] || STAGES.find(s => s.endless);
+      if (nextSt) {
+        btnNext.style.display = "";
+        btnNext.textContent = nextSt.endless ? "∞ 무한 모드로" : "다음 스테이지";
+        btnNext._nextStageRef = nextSt;
+      } else {
+        btnNext.style.display = "none";
+        btnNext._nextStageRef = null;
+      }
+    } else {
+      btnNext.style.display = "none";
+      btnNext._nextStageRef = null;
     }
   }
   saveState(); updateCurrency();
@@ -4283,6 +4375,12 @@ function draw() {
     ctx.shadowColor = "#ff00aa";
     ctx.fillText("LUCKY SPIN", cx, cy + 5);
     ctx.shadowBlur = 0;
+    ctx.font = "600 12px sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillText("P 키 또는 화면 탭 — 감속 / 멈춤", cx, cy + r + 36);
+    ctx.font = "500 11px sans-serif";
+    ctx.fillStyle = "rgba(200,220,255,0.72)";
+    ctx.fillText("잠시 후 자동으로 느려집니다", cx, cy + r + 54);
     ctx.fillStyle = "#ff3366";
     ctx.beginPath();
     ctx.moveTo(cx + r + 2, cy - 10);
