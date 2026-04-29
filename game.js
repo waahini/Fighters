@@ -6,6 +6,9 @@
    Phase 4: 보스 레이저빔 · 미니언 소환 · 부상/병원 시스템
    ============================================================ */
 
+(function () {
+"use strict";
+
 /* ============================================================
    §2.5  렌더링 — 순수 2D Canvas 모드
    Three.js 코드 완전 비활성화, 모든 드로잉은 Canvas 2D API
@@ -157,9 +160,59 @@ const DAILY_QUEST_DEF = [
 ];
 
 /* ============================================================
-   §3  세이브 / 로드
+   §3  세이브 / 로드 (XOR 패킹 + FNV-1a 무결성 · 구버전 평문 마이그레이션)
    ============================================================ */
 const SAVE_KEY = "lastwar_aircombat_v2";
+const SAVE_WRAP_VER = 1;
+
+const _saveKeyBytes = new Uint8Array([108, 97, 115, 116, 119, 97, 114, 95, 115, 52, 118, 101, 95, 107, 59, 33]);
+const _saveSigSalt = "lastwar|fnv1a|wrap1";
+
+function _fnv1aBytes(buf) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < buf.length; i++) {
+    h ^= buf[i];
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+function _xorU8(data, key) {
+  const out = new Uint8Array(data.length);
+  for (let i = 0; i < data.length; i++) out[i] = data[i] ^ key[i % key.length];
+  return out;
+}
+function _u8ToB64(u8) {
+  let bin = "";
+  const chunk = 8192;
+  for (let i = 0; i < u8.length; i += chunk)
+    bin += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+  return btoa(bin);
+}
+function _b64ToU8(b64) {
+  const bin = atob(b64);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+function _packSave(stateObj) {
+  const te = new TextEncoder();
+  const json = JSON.stringify(stateObj);
+  const jsonBytes = te.encode(json);
+  const sigBytes = te.encode(json + _saveSigSalt);
+  const sig = _fnv1aBytes(sigBytes);
+  const enc = _xorU8(jsonBytes, _saveKeyBytes);
+  return JSON.stringify({ v: SAVE_WRAP_VER, p: _u8ToB64(enc), s: sig });
+}
+function _unpackSave(wrappedStr) {
+  const w = JSON.parse(wrappedStr);
+  if (!w || w.v !== SAVE_WRAP_VER || typeof w.p !== "string" || typeof w.s !== "string") throw new Error("fmt");
+  const raw = _xorU8(_b64ToU8(w.p), _saveKeyBytes);
+  const td = new TextDecoder();
+  const json = td.decode(raw);
+  const te = new TextEncoder();
+  if (_fnv1aBytes(te.encode(json + _saveSigSalt)) !== w.s) throw new Error("sig");
+  return JSON.parse(json);
+}
 
 function newState() {
   const starters = ["블레이즈","타이탄","스톰"];
@@ -195,14 +248,28 @@ function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return newState();
-    const s = Object.assign(newState(), JSON.parse(raw));
-    if (typeof s.tutorialDone !== 'boolean') s.tutorialDone = (s.bestScore|0) > 50;
+    let payload;
+    try {
+      payload = _unpackSave(raw);
+    } catch {
+      let leg;
+      try { leg = JSON.parse(raw); } catch { return newState(); }
+      if (leg && typeof leg.gold === "number") payload = leg;
+      else return newState();
+    }
+    const s = Object.assign(newState(), payload);
+    if (typeof s.tutorialDone !== "boolean") s.tutorialDone = (s.bestScore | 0) > 50;
     delete s.rankHistory;
+    delete s.v;
+    delete s.p;
+    delete s.s;
     sanitizeSaveResources(s);
     return s;
   } catch { return newState(); }
 }
-function saveState() { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }
+function saveState() {
+  try { localStorage.setItem(SAVE_KEY, _packSave(S)); } catch (_) { /* 저장 실패 무시 (사파리 프라이빗 등) */ }
+}
 
 let S = loadState();
 
@@ -1436,6 +1503,8 @@ function startBattle(stage) {
   showBattle();
   B.player.x=W/2; B.player.y=_playerBaseY(); B.player.fireCd=0; B.player._bombCd=0;
   B.running=true;
+  _spdWinStart = 0;
+  _spdTickCount = 0;
   $("gameOverPanel").classList.remove("show");
   $("bossPanel").classList.remove("show");
   setWeatherText();
@@ -1532,6 +1601,8 @@ if (_adBtn) _adBtn.addEventListener("click", () => {
 
 function returnToLobby() {
   B.running=false;
+  _spdWinStart = 0;
+  _spdTickCount = 0;
   showLobby();
 }
 
@@ -2076,10 +2147,29 @@ function update() {
     return;
   }
 
-  if (B.paused) return;
+  if (B.paused) { _spdWinStart = 0; _spdTickCount = 0; return; }
 
   /* 힛스탑 — 큰 타격 시 N프레임 일시 정지 */
   if (_hitstop > 0) { _hitstop--; return; }
+
+  /* 스피드핵 완화: 벽시계 대비 전투 틱이 과도하면 일시정지 (rAF 다중 호출 등) */
+  if (!document.hidden) {
+    if (!_spdWinStart) _spdWinStart = Date.now();
+    _spdTickCount++;
+    const el = Date.now() - _spdWinStart;
+    if (el >= 1600) {
+      const maxAllowed = Math.floor(el / 9) + 35;
+      if (_spdTickCount > maxAllowed) {
+        B.paused = true;
+        toast("⚠ 비정상 게임 속도가 감지되어 일시정지했습니다.", "warn");
+      }
+      _spdWinStart = Date.now();
+      _spdTickCount = 0;
+    }
+  } else {
+    _spdWinStart = 0;
+    _spdTickCount = 0;
+  }
 
   /* 총알·파티클 수 상한 (성능 보호) */
   if (B.bullets.length > MAX_ALLY_BULLETS)       B.bullets.splice(0, B.bullets.length - MAX_ALLY_BULLETS);
@@ -2711,6 +2801,8 @@ function update() {
    ============================================================ */
 function endBattle(win) {
   B.running=false;
+  _spdWinStart = 0;
+  _spdTickCount = 0;
   /* 잔존 3D 메쉬 일괄 정리 (메모리 누수 방지) */
   for (const e of B.enemies)      clearMesh(e);
   for (const b of B.bullets)      clearMesh(b);
@@ -4418,6 +4510,8 @@ function draw() {
    (고정 시뮬 다중 스텝은 아·적·탄 상대속도를 어긋나게 하므로 쓰지 않음)
    ============================================================ */
 let _lastFrameTime = 0;
+let _spdWinStart = 0;
+let _spdTickCount = 0;
 function loop(ts) {
   if (document.hidden) { requestAnimationFrame(loop); return; }
   if (ts - _lastFrameTime < 14) { requestAnimationFrame(loop); return; }
@@ -4560,3 +4654,21 @@ function init() {
 }
 init();
 window.addEventListener("beforeunload", saveState);
+
+/* 개발자 도구 분석 난이도 상승(완전 차단 불가) — 창 크기 휴리스틱 + debugger */
+(function _devtoolsProbe() {
+  let streak = 0;
+  setInterval(() => {
+    const dw = window.outerWidth - window.innerWidth;
+    const dh = window.outerHeight - window.innerHeight;
+    if (dw > 185 || dh > 185) {
+      streak++;
+      if (streak >= 3) {
+        streak = 0;
+        debugger;
+      }
+    } else streak = Math.max(0, streak - 1);
+  }, 1600);
+})();
+
+})();
